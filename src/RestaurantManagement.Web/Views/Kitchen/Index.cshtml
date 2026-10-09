@@ -1,0 +1,172 @@
+@model IEnumerable<KOTDto>
+@{
+    ViewData["Title"] = "Kitchen Display System (KDS)";
+    var newKots = Model.Where(k => k.Status == KOTStatus.New || k.Status == KOTStatus.Accepted).ToList();
+    var prepKots = Model.Where(k => k.Status == KOTStatus.Preparing).ToList();
+    var readyKots = Model.Where(k => k.Status == KOTStatus.Ready).ToList();
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-kitchen-set text-warning me-2"></i>Kitchen Display System (KDS)</h2>
+        <p class="text-secondary mb-0">Real-time KOT order preparation queue for chefs and kitchen staff.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <button onclick="window.location.reload();" class="btn btn-outline-light rounded-pill px-4">
+            <i class="fa-solid fa-rotate me-1"></i> Refresh Queue
+        </button>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Column 1: NEW KOTs -->
+    <div class="col-lg-4">
+        <div class="kds-column">
+            <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
+                <h5 class="fw-bold mb-0 text-info"><i class="fa-solid fa-bell me-2"></i>NEW KOTs</h5>
+                <span class="badge bg-info text-dark fs-6 rounded-pill">@newKots.Count</span>
+            </div>
+
+            @if (!newKots.Any())
+            {
+                <div class="text-center py-5 text-secondary">
+                    <i class="fa-solid fa-check-circle fs-2 mb-2"></i>
+                    <p class="small mb-0">No new KOT orders in queue.</p>
+                </div>
+            }
+            @foreach (var kot in newKots)
+            {
+                <div class="kds-ticket" style="border-left-color: #0dcaf0;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
+                        <span class="badge bg-info text-dark">Table: @kot.TableNumber</span>
+                    </div>
+                    <div class="small text-secondary mb-2">
+                        <span>Waiter: @kot.WaiterName</span> &bull; <span>Time: @kot.CreatedAt.ToString("t")</span>
+                    </div>
+
+                    <div class="border-top border-bottom border-secondary py-2 my-2">
+                        @foreach (var item in kot.Items)
+                        {
+                            <div class="d-flex justify-content-between text-white fw-semibold mb-1">
+                                <span>@item.MenuItemName</span>
+                                <span class="badge bg-warning text-dark fs-6">x@item.Quantity</span>
+                            </div>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(kot.Notes))
+                    {
+                        <div class="small text-warning mb-3">
+                            <i class="fa-solid fa-note-sticky me-1"></i>Note: @kot.Notes
+                        </div>
+                    }
+
+                    <form asp-action="UpdateKOTStatus" method="post">
+                        <input type="hidden" name="kotId" value="@kot.Id" />
+                        <input type="hidden" name="status" value="@KOTStatus.Preparing" />
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2">
+                            <i class="fa-solid fa-fire-burner me-1"></i> Start Cooking
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Column 2: PREPARING -->
+    <div class="col-lg-4">
+        <div class="kds-column">
+            <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
+                <h5 class="fw-bold mb-0 text-warning"><i class="fa-solid fa-fire-burner me-2"></i>PREPARING</h5>
+                <span class="badge bg-warning text-dark fs-6 rounded-pill">@prepKots.Count</span>
+            </div>
+
+            @if (!prepKots.Any())
+            {
+                <div class="text-center py-5 text-secondary">
+                    <i class="fa-solid fa-utensils fs-2 mb-2"></i>
+                    <p class="small mb-0">No orders currently cooking.</p>
+                </div>
+            }
+            @foreach (var kot in prepKots)
+            {
+                <div class="kds-ticket" style="border-left-color: #ffc107;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
+                        <span class="badge bg-warning text-dark">Table: @kot.TableNumber</span>
+                    </div>
+                    <div class="small text-secondary mb-2">
+                        <span>Waiter: @kot.WaiterName</span> &bull; <span>Time: @kot.CreatedAt.ToString("t")</span>
+                    </div>
+
+                    <div class="border-top border-bottom border-secondary py-2 my-2">
+                        @foreach (var item in kot.Items)
+                        {
+                            <div class="d-flex justify-content-between text-white fw-semibold mb-1">
+                                <span>@item.MenuItemName</span>
+                                <span class="badge bg-warning text-dark fs-6">x@item.Quantity</span>
+                            </div>
+                        }
+                    </div>
+
+                    <form asp-action="UpdateKOTStatus" method="post">
+                        <input type="hidden" name="kotId" value="@kot.Id" />
+                        <input type="hidden" name="status" value="@KOTStatus.Ready" />
+                        <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold py-2">
+                            <i class="fa-solid fa-circle-check me-1"></i> Mark Ready
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Column 3: READY TO SERVE -->
+    <div class="col-lg-4">
+        <div class="kds-column">
+            <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
+                <h5 class="fw-bold mb-0 text-success"><i class="fa-solid fa-tray me-2"></i>READY TO SERVE</h5>
+                <span class="badge bg-success text-white fs-6 rounded-pill">@readyKots.Count</span>
+            </div>
+
+            @if (!readyKots.Any())
+            {
+                <div class="text-center py-5 text-secondary">
+                    <i class="fa-solid fa-clock fs-2 mb-2"></i>
+                    <p class="small mb-0">No prepared food waiting for pickup.</p>
+                </div>
+            }
+            @foreach (var kot in readyKots)
+            {
+                <div class="kds-ticket" style="border-left-color: #198754;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
+                        <span class="badge bg-success">Table: @kot.TableNumber</span>
+                    </div>
+                    <div class="small text-secondary mb-2">
+                        <span>Waiter: @kot.WaiterName</span>
+                    </div>
+
+                    <div class="border-top border-bottom border-secondary py-2 my-2">
+                        @foreach (var item in kot.Items)
+                        {
+                            <div class="d-flex justify-content-between text-white fw-semibold mb-1">
+                                <span>@item.MenuItemName</span>
+                                <span class="badge bg-success fs-6">x@item.Quantity</span>
+                            </div>
+                        }
+                    </div>
+
+                    <form asp-action="UpdateKOTStatus" method="post">
+                        <input type="hidden" name="kotId" value="@kot.Id" />
+                        <input type="hidden" name="status" value="@KOTStatus.Served" />
+                        <button type="submit" class="btn btn-outline-light w-100 rounded-pill fw-bold py-2">
+                            <i class="fa-solid fa-check-double me-1"></i> Mark Served
+                        </button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>

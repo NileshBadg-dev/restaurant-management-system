@@ -1,0 +1,287 @@
+@{
+    ViewData["Title"] = "POS - New Order";
+    var categories = ViewBag.Categories as IEnumerable<CategoryDto> ?? new List<CategoryDto>();
+    var menuItems = ViewBag.MenuItems as IEnumerable<MenuItemDto> ?? new List<MenuItemDto>();
+    var tables = ViewBag.Tables as IEnumerable<TableDto> ?? new List<TableDto>();
+    var selectedTable = ViewBag.SelectedTable as TableDto;
+    int? selectedTableId = ViewBag.SelectedTableId as int?;
+}
+
+<div class="row g-0">
+    <!-- Left 8 Columns: Category Filter & Menu Items Grid -->
+    <div class="col-lg-8 pe-lg-3">
+        <!-- Order Header Configuration -->
+        <div class="glass-card p-3 mb-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1 fw-bold">Order Type</label>
+                    <select id="orderType" class="form-select bg-dark text-white border-secondary">
+                        <option value="1" selected>Dine-in</option>
+                        <option value="2">Takeaway</option>
+                        <option value="3">Delivery</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1 fw-bold">Assigned Table</label>
+                    <select id="tableSelect" class="form-select bg-dark text-white border-secondary">
+                        <option value="">Select Table...</option>
+                        @foreach (var t in tables)
+                        {
+                            bool isSel = selectedTableId.HasValue && selectedTableId.Value == t.Id;
+                            <option value="@t.Id" selected="@isSel">@t.TableNumber (@t.FloorName) - @t.StatusName</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1 fw-bold">Customer Name</label>
+                    <input type="text" id="customerName" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Rahul Sharma" value="Rahul Sharma" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1 fw-bold">Customer Phone</label>
+                    <input type="text" id="customerPhone" class="form-control bg-dark text-white border-secondary" placeholder="9876543210" value="9876543210" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Filter Pills & Search -->
+        <div class="glass-card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="input-group w-50">
+                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <input type="text" id="menuSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search menu item..." onkeyup="filterMenu()" />
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-success btn-sm active" onclick="filterVeg('all')">All</button>
+                    <button class="btn btn-outline-success btn-sm" onclick="filterVeg('veg')"><span class="veg-indicator me-1"></span> Veg</button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="filterVeg('nonveg')"><span class="nonveg-indicator me-1"></span> Non-Veg</button>
+                </div>
+            </div>
+
+            <!-- Categories Bar -->
+            <div class="d-flex gap-2 overflow-auto pb-2" style="white-space: nowrap;">
+                <button class="btn btn-primary rounded-pill px-3 cat-btn active" onclick="filterCategory(0, this)">All Items</button>
+                @foreach (var cat in categories)
+                {
+                    <button class="btn btn-outline-light rounded-pill px-3 cat-btn" onclick="filterCategory(@cat.Id, this)">@cat.Name</button>
+                }
+            </div>
+        </div>
+
+        <!-- Menu Items Cards Grid -->
+        <div class="row g-3" id="menuGrid" style="max-height: 60vh; overflow-y: auto;">
+            @foreach (var item in menuItems)
+            {
+                <div class="col-md-4 col-sm-6 menu-card-item" data-cat="@item.CategoryId" data-veg="@(item.IsVeg ? "veg" : "nonveg")" data-name="@item.Name.ToLower()">
+                    <div class="pos-menu-item p-3 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="@(item.IsVeg ? "veg-indicator" : "nonveg-indicator") me-2" title="@(item.IsVeg ? "Vegetarian" : "Non-Vegetarian")"></span>
+                                <span class="badge bg-secondary">@item.CategoryName</span>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">@item.Name</h6>
+                            <p class="text-secondary small mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@item.Description</p>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary">
+                            <span class="fs-5 fw-bold text-warning">₹@item.Price.ToString("N0")</span>
+                            <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="addToCart(@item.Id, '@item.Name', @item.Price)">
+                                <i class="fa-solid fa-plus me-1"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Right 4 Columns: Live Order Cart Sidebar -->
+    <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="glass-card p-4 pos-cart-panel d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
+                    <h5 class="fw-bold mb-0 text-white"><i class="fa-solid fa-shopping-cart text-warning me-2"></i>Current Cart</h5>
+                    <span class="badge bg-primary fs-6" id="cartCount">0 Items</span>
+                </div>
+
+                <!-- Items Cart List -->
+                <div id="cartItemsList" style="max-height: 40vh; overflow-y: auto;" class="pe-1 mb-3">
+                    <div class="text-center text-secondary py-5" id="emptyCartMsg">
+                        <i class="fa-solid fa-basket-shopping fs-1 mb-2"></i>
+                        <p class="small">Cart is empty. Select items from the menu to build order.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Calculation & Submit -->
+            <div class="border-top border-secondary pt-3">
+                <div class="mb-2">
+                    <input type="text" id="specialNotes" class="form-control bg-dark text-white border-secondary form-control-sm" placeholder="Special Instructions (e.g. Less spicy, Extra napkin)..." />
+                </div>
+                
+                <div class="d-flex justify-content-between text-secondary mb-1 small">
+                    <span>Subtotal:</span>
+                    <span class="fw-bold text-white" id="subtotalAmount">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between text-secondary mb-1 small">
+                    <span>CGST (2.5%):</span>
+                    <span class="fw-bold text-white" id="cgstAmount">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between text-secondary mb-1 small">
+                    <span>SGST (2.5%):</span>
+                    <span class="fw-bold text-white" id="sgstAmount">₹0.00</span>
+                </div>
+                <div class="d-flex justify-content-between fs-4 fw-bold text-warning border-top border-secondary pt-2 mb-3">
+                    <span>Total Pay:</span>
+                    <span id="grandTotalAmount">₹0.00</span>
+                </div>
+
+                <button class="btn btn-warning w-100 py-3 rounded-pill fw-bold text-dark fs-5 shadow" onclick="submitPOSOrder()">
+                    <i class="fa-solid fa-fire me-2"></i> Confirm & Send KOT
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let cart = [];
+
+    function addToCart(id, name, price) {
+        let existing = cart.find(i => i.id === id);
+        if (existing) {
+            existing.qty += 1;
+        } else {
+            cart.push({ id: id, name: name, price: price, qty: 1, notes: "" });
+        }
+        renderCart();
+    }
+
+    function updateQty(id, change) {
+        let item = cart.find(i => i.id === id);
+        if (item) {
+            item.qty += change;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        let container = $('#cartItemsList');
+        if (cart.length === 0) {
+            container.html(`<div class="text-center text-secondary py-5"><i class="fa-solid fa-basket-shopping fs-1 mb-2"></i><p class="small">Cart is empty.</p></div>`);
+            $('#cartCount').text('0 Items');
+            $('#subtotalAmount').text('₹0.00');
+            $('#cgstAmount').text('₹0.00');
+            $('#sgstAmount').text('₹0.00');
+            $('#grandTotalAmount').text('₹0.00');
+            return;
+        }
+
+        let html = '';
+        let subtotal = 0;
+        let totalQty = 0;
+
+        cart.forEach(item => {
+            let itemTotal = item.price * item.qty;
+            subtotal += itemTotal;
+            totalQty += item.qty;
+
+            html += `
+                <div class="p-2 mb-2 bg-dark rounded border border-secondary d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-white small">${item.name}</div>
+                        <div class="text-warning small">₹${item.price} x ${item.qty} = ₹${itemTotal}</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="btn btn-outline-danger btn-sm px-2 py-0" onclick="updateQty(${item.id}, -1)">-</button>
+                        <span class="fw-bold text-white px-2">${item.qty}</span>
+                        <button class="btn btn-outline-success btn-sm px-2 py-0" onclick="updateQty(${item.id}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.html(html);
+        $('#cartCount').text(totalQty + ' Items');
+
+        let cgst = subtotal * 0.025;
+        let sgst = subtotal * 0.025;
+        let total = subtotal + cgst + sgst;
+
+        $('#subtotalAmount').text('₹' + subtotal.toFixed(2));
+        $('#cgstAmount').text('₹' + cgst.toFixed(2));
+        $('#sgstAmount').text('₹' + sgst.toFixed(2));
+        $('#grandTotalAmount').text('₹' + total.toFixed(2));
+    }
+
+    function filterCategory(catId, btn) {
+        $('.cat-btn').removeClass('btn-primary active').addClass('btn-outline-light');
+        $(btn).removeClass('btn-outline-light').addClass('btn-primary active');
+
+        if (catId === 0) {
+            $('.menu-card-item').show();
+        } else {
+            $('.menu-card-item').hide();
+            $(`.menu-card-item[data-cat="${catId}"]`).show();
+        }
+    }
+
+    function filterVeg(type) {
+        if (type === 'all') $('.menu-card-item').show();
+        else {
+            $('.menu-card-item').hide();
+            $(`.menu-card-item[data-veg="${type}"]`).show();
+        }
+    }
+
+    function filterMenu() {
+        let query = $('#menuSearch').val().toLowerCase();
+        $('.menu-card-item').each(function() {
+            let name = $(this).data('name');
+            if (name.includes(query)) $(this).show();
+            else $(this).hide();
+        });
+    }
+
+    function submitPOSOrder() {
+        if (cart.length === 0) {
+            alert("Cart is empty! Please add items to create order.");
+            return;
+        }
+
+        let tableId = $('#tableSelect').val();
+        let orderType = parseInt($('#orderType').val());
+        
+        if (orderType === 1 && !tableId) {
+            alert("Please select an assigned table for Dine-in order.");
+            return;
+        }
+
+        let dto = {
+            orderType: orderType,
+            tableId: tableId ? parseInt(tableId) : null,
+            customerName: $('#customerName').val(),
+            customerPhone: $('#customerPhone').val(),
+            specialInstructions: $('#specialNotes').val(),
+            items: cart.map(i => ({ menuItemId: i.id, quantity: i.qty, specialInstructions: i.notes || "" }))
+        };
+
+        $.ajax({
+            url: '/Orders/CreatePOSOrder',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(dto),
+            success: function(res) {
+                if (res.success) {
+                    alert('Order #' + res.orderNumber + ' Created & KOT Generated Successfully!');
+                    window.location.href = '/Kitchen';
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            }
+        });
+    }
+</script>
+}

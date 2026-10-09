@@ -1,0 +1,236 @@
+@model DashboardSummaryDto
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row mb-4 align-items-center animated-fade-in">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-success me-2"></i>Dashboard</h2>
+        <p class="metric-desc-text mb-0">Real-time status overview of active dining tables, orders, kitchen queue, and sales summary.</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="/Orders/POS" class="btn btn-new-order rounded-pill px-4 me-2 shadow-sm">
+            <i class="fa-solid fa-plus me-1"></i> New Order
+        </a>
+        <a href="/Kitchen" class="btn btn-kds rounded-pill px-4 shadow-sm">
+            <i class="fa-solid fa-kitchen-set me-1"></i> Kitchen KDS
+        </a>
+    </div>
+</div>
+
+<!-- Key Metrics Cards Row (5 Color-Bordered Cards) -->
+<div class="row g-3 mb-4 animated-fade-in">
+    <!-- Card 1: Sales -->
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="metric-card-sales h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="metric-icon-box metric-sales">
+                    <i class="fa-solid fa-indian-rupee-sign"></i>
+                </div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small px-2 py-1">
+                    <i class="fa-solid fa-arrow-up me-1"></i>Sales
+                </span>
+            </div>
+            <div class="metric-title-label mt-2">Today's Sales</div>
+            <div class="fs-3 fw-bold text-dark mt-1">₹@Model.TodaySales.ToString("N0")</div>
+            <div class="metric-desc-text mt-1"><i class="fa-solid fa-arrow-up text-success me-1"></i>vs Yesterday ₹@Model.YesterdaySales.ToString("N0")</div>
+        </div>
+    </div>
+    
+    <!-- Card 2: Orders -->
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="metric-card-orders h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="metric-icon-box metric-orders">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill small px-2 py-1">
+                    Today
+                </span>
+            </div>
+            <div class="metric-title-label mt-2">Today's Orders</div>
+            <div class="fs-3 fw-bold text-dark mt-1">@Model.TodayOrdersCount</div>
+            <div class="metric-desc-text mt-1">Total active & completed</div>
+        </div>
+    </div>
+
+    <!-- Card 3: Active Tables -->
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="metric-card-tables h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="metric-icon-box metric-tables">
+                    <i class="fa-solid fa-chair"></i>
+                </div>
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill small px-2 py-1">
+                    Tables
+                </span>
+            </div>
+            <div class="metric-title-label mt-2">Active Tables</div>
+            <div class="fs-3 fw-bold text-warning-emphasis mt-1">@Model.OccupiedTablesCount / @Model.TotalTablesCount</div>
+            <div class="metric-desc-text mt-1">@Model.AvailableTablesCount Available &bull; @Model.ReservedTablesCount Reserved</div>
+        </div>
+    </div>
+
+    <!-- Card 4: Pending KOT -->
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="metric-card-kot h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="metric-icon-box metric-kot">
+                    <i class="fa-solid fa-fire-burner"></i>
+                </div>
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small px-2 py-1">
+                    Kitchen
+                </span>
+            </div>
+            <div class="metric-title-label mt-2">Pending KOT</div>
+            <div class="fs-3 fw-bold text-danger mt-1">@Model.PendingKOTCount</div>
+            <div class="metric-desc-text mt-1">In kitchen queue</div>
+        </div>
+    </div>
+
+    <!-- Card 5: Completed -->
+    <div class="col-xl col-md-4 col-sm-6">
+        <div class="metric-card-completed h-100">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="metric-icon-box metric-completed">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <span class="badge bg-purple-subtle text-purple border border-purple-subtle rounded-pill small px-2 py-1" style="background: #f5f3ff; color: #7c3aed; border-color: #ddd6fe;">
+                    Settled
+                </span>
+            </div>
+            <div class="metric-title-label mt-2">Completed</div>
+            <div class="fs-3 fw-bold text-dark mt-1">@Model.CompletedOrdersCount</div>
+            <div class="metric-desc-text mt-1"><i class="fa-solid fa-check text-success me-1"></i>Settled orders</div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Section: Tables View -->
+<div class="row g-4 mb-4 animated-fade-in">
+    <div class="col-lg-8">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 pb-3 border-bottom">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa-solid fa-chair text-success me-2"></i>Tables</h5>
+                    <p class="metric-desc-text mb-0">Select any table box to view live order details, add items, or process payment.</p>
+                </div>
+                
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/Tables" class="btn btn-manage-tables btn-sm rounded-pill px-3">
+                        Manage Tables <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Single Unified Grid for Table Cards -->
+            <div class="row g-3">
+                @foreach (var floor in Model.FloorTables)
+                {
+                    @foreach (var table in floor.Tables)
+                    {
+                        string statusClass = table.Status switch {
+                            TableStatus.Available => "status-available",
+                            TableStatus.Occupied => "status-occupied",
+                            TableStatus.Reserved => "status-reserved",
+                            TableStatus.Billing => "status-billing",
+                            _ => "status-cleaning"
+                        };
+
+                        string badgeClass = table.Status switch {
+                            TableStatus.Available => "badge-available",
+                            TableStatus.Occupied => "badge-occupied",
+                            TableStatus.Reserved => "badge-reserved",
+                            TableStatus.Billing => "badge-billing",
+                            _ => "badge-cleaning"
+                        };
+
+                        <div class="col-md-4 col-sm-6">
+                            <div class="table-card @statusClass" onclick="window.location.href='/Tables/Details/@table.Id'" title="Click to manage Table @table.TableNumber">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold fs-5 text-dark d-flex align-items-center gap-2">
+                                        <i class="fa-solid fa-chair text-muted fs-6"></i>
+                                        <span>@table.TableNumber</span>
+                                    </span>
+                                    <span class="status-badge @badgeClass">@table.StatusName</span>
+                                </div>
+
+                                <!-- Floor Tag & Seat Capacity Pills -->
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="floor-tag-badge">
+                                        <i class="fa-solid fa-layer-group me-1"></i>@floor.Name
+                                    </span>
+                                    <span class="seat-pill">
+                                        <i class="fa-solid fa-users text-muted me-1"></i>@table.Capacity Seats
+                                    </span>
+                                </div>
+
+                                @if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
+                                {
+                                    <div class="fw-bold text-dark mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                        <span class="small metric-desc-text">Current Bill:</span>
+                                        <span class="fs-6 text-success fw-bold">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                                    </div>
+                                }
+                                else if (table.Status == TableStatus.Reserved)
+                                {
+                                    <div class="small text-primary mt-2 pt-2 border-top fw-semibold">
+                                        <i class="fa-solid fa-clock me-1"></i> Reserved for Guests
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-success mt-2 pt-2 border-top fw-semibold">
+                                        <i class="fa-solid fa-circle-check me-1"></i> Ready for Seating
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Top Selling Items Widget with Colorful Rank Badges -->
+    <div class="col-lg-4">
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-fire text-warning me-2"></i>Top Selling Items
+                </h5>
+                <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2 py-1 small">Popular</span>
+            </div>
+
+            <div class="list-group list-group-flush bg-transparent">
+                @for (int i = 0; i < Model.TopSellingItems.Count; i++)
+                {
+                    var item = Model.TopSellingItems[i];
+                    string rankBadgeClass = i switch {
+                        0 => "bg-warning text-dark border border-warning-emphasis",
+                        1 => "bg-secondary text-white border border-secondary",
+                        2 => "bg-danger text-white border border-danger",
+                        3 => "bg-primary text-white border border-primary",
+                        4 => "bg-success text-white border border-success",
+                        _ => "bg-dark text-white border border-dark"
+                    };
+
+                    <div class="list-group-item bg-transparent text-dark border-bottom py-3 px-0 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge rounded-circle d-flex align-items-center justify-content-center shadow-sm @rankBadgeClass" style="width: 30px; height: 30px; font-weight: 800; font-size: 0.85rem;">
+                                @(i + 1)
+                            </span>
+                            <div>
+                                <div class="fw-bold text-dark mb-0">@item.MenuItemName</div>
+                                <div class="metric-desc-text">@item.TotalQuantitySold Portions Sold</div>
+                            </div>
+                        </div>
+                        <div class="fw-bold text-success fs-6">
+                            ₹@item.TotalRevenue.ToString("N0")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

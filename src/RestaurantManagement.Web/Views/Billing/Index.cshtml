@@ -1,0 +1,64 @@
+@model IEnumerable<BillDto>
+@{
+    ViewData["Title"] = "Billing & Invoices";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-file-invoice-dollar text-success me-2"></i>Billing & Payment Settlement</h2>
+        <p class="text-secondary mb-0">Generate customer invoices, apply discounts, and collect payments.</p>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="glass-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr class="text-secondary">
+                    <th>Invoice #</th>
+                    <th>Order #</th>
+                    <th>Table</th>
+                    <th>Date & Time</th>
+                    <th>Amount</th>
+                    <th>Payment Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bill in Model)
+                {
+                    <tr>
+                        <td class="fw-bold text-white">@bill.InvoiceNumber</td>
+                        <td><span class="badge bg-secondary">@bill.OrderNumber</span></td>
+                        <td>@(bill.TableNumber != null ? $"Table: {bill.TableNumber}" : "Dine-in")</td>
+                        <td class="small text-secondary">@bill.BillDate.ToString("g")</td>
+                        <td class="fw-bold text-warning">₹@bill.GrandTotal.ToString("N0")</td>
+                        <td>
+                            @if (bill.IsPaid)
+                            {
+                                <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-check me-1"></i> Paid</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-clock me-1"></i> Pending Payment</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a href="/Billing/Invoice/@bill.Id" class="btn btn-sm btn-primary rounded-pill px-3">
+                                <i class="fa-solid fa-eye me-1"></i> View Tax Invoice
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

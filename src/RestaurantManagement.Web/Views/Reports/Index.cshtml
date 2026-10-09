@@ -1,0 +1,72 @@
+@model SalesReportDto
+@{
+    ViewData["Title"] = "Sales & Tax Reports";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-chart-pie text-success me-2"></i>Sales & GST Tax Analytics Reports</h2>
+        <p class="text-secondary mb-0">Financial summary from <strong>@Model.StartDate.ToString("dd MMM yyyy")</strong> to <strong>@Model.EndDate.ToString("dd MMM yyyy")</strong>.</p>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-secondary small fw-bold text-uppercase">Total Revenue</div>
+            <div class="fs-2 fw-bold text-success mt-2">₹@Model.TotalRevenue.ToString("N0")</div>
+            <div class="small text-secondary mt-1">Net Settled Amount</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-secondary small fw-bold text-uppercase">Total Completed Orders</div>
+            <div class="fs-2 fw-bold text-info mt-2">@Model.TotalOrders</div>
+            <div class="small text-secondary mt-1">Dine-in, Takeaway & Delivery</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-secondary small fw-bold text-uppercase">Total CGST Tax (2.5%)</div>
+            <div class="fs-2 fw-bold text-warning mt-2">₹@Model.TotalCGST.ToString("N0")</div>
+            <div class="small text-secondary mt-1">Central Tax Liability</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="glass-card p-4 text-center">
+            <div class="text-secondary small fw-bold text-uppercase">Total SGST Tax (2.5%)</div>
+            <div class="fs-2 fw-bold text-warning mt-2">₹@Model.TotalSGST.ToString("N0")</div>
+            <div class="small text-secondary mt-1">State Tax Liability</div>
+        </div>
+    </div>
+</div>
+
+<!-- Breakdown Table -->
+<div class="glass-card p-4">
+    <h5 class="fw-bold text-white mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-calendar-days text-info me-2"></i>Daily Sales Summary</h5>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr class="text-secondary">
+                    <th>Date</th>
+                    <th>Total Orders</th>
+                    <th>Tax Collected (GST)</th>
+                    <th class="text-end">Sales Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var day in Model.DailySummaries)
+                {
+                    decimal dayTax = Math.Round(day.SalesAmount * 0.05m / 1.05m, 2);
+                    <tr>
+                        <td class="fw-bold text-white">@day.Date.ToString("dd MMM yyyy (ddd)")</td>
+                        <td class="fw-bold text-info">@day.OrdersCount Orders</td>
+                        <td class="text-secondary">₹@dayTax.ToString("N0")</td>
+                        <td class="text-end fw-bold text-success fs-5">₹@day.SalesAmount.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

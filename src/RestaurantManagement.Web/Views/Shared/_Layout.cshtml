@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Girana Garden Restaurant Management System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <div class="app-layout layout-collapsed" id="appLayout">
+        <!-- Collapsible Vertical Sidebar Tabs -->
+        <aside class="app-sidebar sidebar-collapsed" id="appSidebar">
+            <!-- Sidebar Header / Brand -->
+            <div class="sidebar-header">
+                <a class="sidebar-brand" href="/" title="Girana Garden">
+                    <div class="brand-logo-img">
+                        <i class="fa-solid fa-leaf text-white"></i>
+                    </div>
+                    <span class="brand-text luxury-brand-title">Girana Garden</span>
+                </a>
+                <button class="sidebar-toggle-btn" id="sidebarToggle" title="Expand Sidebar">
+                    <i class="fa-solid fa-angles-right" id="toggleIcon"></i>
+                </button>
+            </div>
+
+            <!-- Sidebar Vertical Navigation Tabs with Vibrant Icon Colors -->
+            <nav class="sidebar-nav">
+                <div class="nav flex-column">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard" data-title="Dashboard">
+                        <i class="fa-solid fa-chart-pie nav-icon" style="color: #10b981;"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tables" ? "active" : "")" href="/Tables" data-title="Tables & Floor">
+                        <i class="fa-solid fa-chair nav-icon" style="color: #f59e0b;"></i>
+                        <span class="nav-text">Tables & Floor</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "POS" ? "active" : "")" href="/Orders/POS" data-title="New POS Order">
+                        <i class="fa-solid fa-cash-register nav-icon" style="color: #6366f1;"></i>
+                        <span class="nav-text">New POS Order</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" href="/Orders" data-title="All Orders">
+                        <i class="fa-solid fa-receipt nav-icon" style="color: #0284c7;"></i>
+                        <span class="nav-text">All Orders</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Kitchen" ? "active" : "")" href="/Kitchen" data-title="Kitchen KDS">
+                        <i class="fa-solid fa-kitchen-set nav-icon" style="color: #ef4444;"></i>
+                        <span class="nav-text">Kitchen (KDS)</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Billing" ? "active" : "")" href="/Billing" data-title="Billing & Payments">
+                        <i class="fa-solid fa-file-invoice-dollar nav-icon" style="color: #8b5cf6;"></i>
+                        <span class="nav-text">Billing & Payments</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Menu" ? "active" : "")" href="/Menu" data-title="Menu Items">
+                        <i class="fa-solid fa-bowl-food nav-icon" style="color: #0d9488;"></i>
+                        <span class="nav-text">Menu Items</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "active" : "")" href="/Inventory" data-title="Stock & Inventory">
+                        <i class="fa-solid fa-boxes-stacked nav-icon" style="color: #64748b;"></i>
+                        <span class="nav-text">Stock</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")" href="/Reports" data-title="Reports & Analytics">
+                        <i class="fa-solid fa-chart-line nav-icon" style="color: #d97706;"></i>
+                        <span class="nav-text">Reports</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="app-main">
+            <!-- Top Header Navbar -->
+            <header class="top-header sticky-top">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-outline-secondary btn-sm rounded-circle d-md-none" id="mobileSidebarToggle">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                        <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-utensils text-success fs-4"></i>
+                            <span class="luxury-brand-title">Girana Garden</span>
+                        </a>
+                    </div>
+                    
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Live Date & Time Clock with Thin Border -->
+                        <div class="live-clock-badge d-none d-md-flex" title="Current Local Time" style="border: 1.5px solid #cbd5e1;">
+                            <i class="fa-regular fa-clock text-success"></i>
+                            <span id="liveClockText">Loading...</span>
+                        </div>
+
+                        <!-- Quick Role Switcher with Styled Dropdown & Logos -->
+                        <div class="dropdown">
+                            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 shadow-sm" type="button" data-bs-toggle="dropdown">
+                                <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">Manager</strong>
+                            </button>
+                            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg">
+                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
+                                <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-white me-2"></i> Manager</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cash-register text-success me-2"></i> Cashier</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Body Container -->
+            <main role="main" class="main-content py-4 px-4">
+                @RenderBody()
+            </main>
+
+            <!-- Global Footer -->
+            <footer class="app-footer text-center text-secondary py-3 border-top mt-auto" style="font-size: 0.85rem; background: #ffffff;">
+                <div>Girana Garden Restaurant Management System &bull; Clean Architecture .NET 10 MVC + Web API</div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Live Clock Script
+            function updateClock() {
+                const now = new Date();
+                const clockElem = document.getElementById('liveClockText');
+                if (clockElem) {
+                    const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                    clockElem.textContent = `${dateStr}  |  ${timeStr}`;
+                }
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+
+            // Collapsible Sidebar Script
+            const sidebar = document.getElementById('appSidebar');
+            const layout = document.getElementById('appLayout');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const mobileToggle = document.getElementById('mobileSidebarToggle');
+
+            let isCollapsed = true;
+
+            function updateSidebarState() {
+                if (isCollapsed) {
+                    sidebar.classList.add('sidebar-collapsed');
+                    layout.classList.add('layout-collapsed');
+                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-right';
+                    if (toggleBtn) toggleBtn.setAttribute('title', 'Expand Sidebar');
+                } else {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    layout.classList.remove('layout-collapsed');
+                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-left';
+                    if (toggleBtn) toggleBtn.setAttribute('title', 'Collapse Sidebar');
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function () {
+                    isCollapsed = !isCollapsed;
+                    updateSidebarState();
+                });
+            }
+
+            if (mobileToggle) {
+                mobileToggle.addEventListener('click', function () {
+                    sidebar.classList.toggle('mobile-open');
+                });
+            }
+
+            updateSidebarState();
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

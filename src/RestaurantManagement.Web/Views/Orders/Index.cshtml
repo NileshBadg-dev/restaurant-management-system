@@ -1,0 +1,64 @@
+@model IEnumerable<OrderDto>
+@{
+    ViewData["Title"] = "All Orders List";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="fw-bold mb-1"><i class="fa-solid fa-receipt text-primary me-2"></i>Restaurant Orders History</h2>
+        <p class="text-secondary mb-0">Track all Dine-in, Takeaway, and Delivery orders in real-time.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="/Orders/POS" class="btn btn-primary rounded-pill px-4">
+            <i class="fa-solid fa-plus me-1"></i> New POS Order
+        </a>
+    </div>
+</div>
+
+<div class="glass-card p-4">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr class="text-secondary">
+                    <th>Order #</th>
+                    <th>Type</th>
+                    <th>Table / Customer</th>
+                    <th>Date & Time</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model)
+                {
+                    string statusBadge = order.Status switch {
+                        OrderStatus.Pending => "bg-warning text-dark",
+                        OrderStatus.Confirmed => "bg-info text-dark",
+                        OrderStatus.Preparing => "bg-primary text-white",
+                        OrderStatus.Ready => "bg-success text-white",
+                        OrderStatus.Completed => "bg-secondary text-white",
+                        _ => "bg-danger text-white"
+                    };
+
+                    <tr>
+                        <td class="fw-bold text-white">@order.OrderNumber</td>
+                        <td><span class="badge bg-outline-secondary border border-secondary text-light">@order.OrderTypeName</span></td>
+                        <td>
+                            <div class="fw-semibold">@(order.TableNumber != null ? $"Table: {order.TableNumber}" : order.CustomerName)</div>
+                            <div class="small text-secondary">@order.CustomerPhone</div>
+                        </td>
+                        <td class="small text-secondary">@order.CreatedAt.ToString("g")</td>
+                        <td><span class="badge @statusBadge px-3 py-2">@order.StatusName</span></td>
+                        <td class="fw-bold text-warning">₹@order.GrandTotal.ToString("N0")</td>
+                        <td class="text-end">
+                            <a href="/Billing/Generate?orderId=@order.Id" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                <i class="fa-solid fa-file-invoice-dollar me-1"></i> Bill & Pay
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,168 @@
+using RestaurantManagement.Domain.Entities;
+using RestaurantManagement.Domain.Enums;
+using RestaurantManagement.Infrastructure.DbContext;
+
+namespace RestaurantManagement.Infrastructure.Data;
+
+public static class DbInitializer
+{
+    public static void SeedData(RestaurantDbContext context)
+    {
+        context.Database.EnsureCreated();
+
+        if (context.Users.Any()) return; // Database has already been seeded
+
+        // 1. Seed Restaurant Settings
+        context.RestaurantSettings.Add(new RestaurantSetting
+        {
+            RestaurantName = "Girana Garden Fine Dine & Bar",
+            Address = "101 Grand Galleria, MG Road, Ahmedabad - 380001",
+            Phone = "+91 98765 43210",
+            Email = "contact@giranagarden.com",
+            GSTIN = "24AAACG1234F1Z9",
+            CurrencySymbol = "₹",
+            CGSTPercentage = 2.5m,
+            SGSTPercentage = 2.5m,
+            ServiceChargePercentage = 0m,
+            InvoicePrefix = "INV"
+        });
+
+        // 2. Seed Users for each role
+        var admin = new User { Username = "admin", PasswordHash = "admin123", FullName = "System Administrator", Email = "admin@giranagarden.com", Phone = "9876500001", Role = UserRole.Admin };
+        var manager = new User { Username = "manager", PasswordHash = "manager123", FullName = "Rajesh Verma (Manager)", Email = "manager@giranagarden.com", Phone = "9876500002", Role = UserRole.Manager };
+        var cashier = new User { Username = "cashier", PasswordHash = "cashier123", FullName = "Suresh Patel (Cashier)", Email = "cashier@giranagarden.com", Phone = "9876500003", Role = UserRole.Cashier };
+        var waiter = new User { Username = "waiter", PasswordHash = "waiter123", FullName = "Amit Kumar (Waiter)", Email = "waiter@giranagarden.com", Phone = "9876500004", Role = UserRole.Waiter };
+        var kitchen = new User { Username = "kitchen", PasswordHash = "kitchen123", FullName = "Chef Sunita (Kitchen Head)", Email = "kitchen@giranagarden.com", Phone = "9876500005", Role = UserRole.KitchenStaff };
+        var inventoryUser = new User { Username = "inventory", PasswordHash = "inventory123", FullName = "Vikram Singh (Inventory)", Email = "inventory@giranagarden.com", Phone = "9876500006", Role = UserRole.InventoryStaff };
+
+        context.Users.AddRange(admin, manager, cashier, waiter, kitchen, inventoryUser);
+        context.SaveChanges();
+
+        // 3. Seed Floors & Tables
+        var groundFloor = new Floor { Name = "Ground Floor", Description = "Main Dining Area", DisplayOrder = 1 };
+        var firstFloor = new Floor { Name = "First Floor", Description = "AC Lounge & Family Area", DisplayOrder = 2 };
+        var outdoor = new Floor { Name = "Outdoor Patio", Description = "Open Garden Seating", DisplayOrder = 3 };
+
+        context.Floors.AddRange(groundFloor, firstFloor, outdoor);
+        context.SaveChanges();
+
+        var t1 = new Table { TableNumber = "Table 01", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t2 = new Table { TableNumber = "Table 02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
+        var t3 = new Table { TableNumber = "Table 03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Reserved };
+        var t4 = new Table { TableNumber = "Table 04", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t5 = new Table { TableNumber = "Table 05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
+        
+        var t11 = new Table { TableNumber = "Table 11", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        var t12 = new Table { TableNumber = "Table 12", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        
+        var t21 = new Table { TableNumber = "Table 21", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
+        var t22 = new Table { TableNumber = "Table 22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Reserved };
+
+        context.Tables.AddRange(t1, t2, t3, t4, t5, t11, t12, t21, t22);
+        context.SaveChanges();
+
+        // 4. Seed Categories & Menu Items
+        var starters = new Category { Name = "Starters", Description = "Delicious appetizers and quick bites", DisplayOrder = 1, ImageUrl = "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=500" };
+        var mainCourse = new Category { Name = "Main Course", Description = "Authentic Indian Curries & Gravies", DisplayOrder = 2, ImageUrl = "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500" };
+        var biryani = new Category { Name = "Biryani & Rice", Description = "Aromatic Hyderabadi & Dum Biryanis", DisplayOrder = 3, ImageUrl = "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500" };
+        var beverages = new Category { Name = "Beverages", Description = "Refreshing Mocktails & Shakes", DisplayOrder = 4, ImageUrl = "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500" };
+        var desserts = new Category { Name = "Desserts", Description = "Sweet indulgences", DisplayOrder = 5, ImageUrl = "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=500" };
+
+        context.Categories.AddRange(starters, mainCourse, biryani, beverages, desserts);
+        context.SaveChanges();
+
+        var paneerTikka = new MenuItem { CategoryId = starters.Id, Name = "Paneer Tikka", Description = "Cottage cheese marinated in yogurt and spices", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 15 };
+        var dalMakhani = new MenuItem { CategoryId = mainCourse.Id, Name = "Dal Makhani", Description = "Slow cooked black lentils with cream and butter", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 20 };
+        var butterNaan = new MenuItem { CategoryId = mainCourse.Id, Name = "Butter Naan", Description = "Freshly baked clay oven bread with butter", Price = 50m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 8 };
+        var chickenBiryani = new MenuItem { CategoryId = biryani.Id, Name = "Chicken Biryani", Description = "Flavorful Basmati rice cooked with tender chicken", Price = 320m, IsVeg = false, IsAvailable = true, PreparationTimeMinutes = 25 };
+        var coldDrink = new MenuItem { CategoryId = beverages.Id, Name = "Cold Drink / Soda", Description = "Chilled carbonated beverage 300ml", Price = 60m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 2 };
+        var coldCoffee = new MenuItem { CategoryId = beverages.Id, Name = "Cold Coffee with Ice Cream", Description = "Rich blended espresso with vanilla scoop", Price = 140m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 10 };
+        var gulabJamun = new MenuItem { CategoryId = desserts.Id, Name = "Gulab Jamun (2 Pcs)", Description = "Warm milk dumplings in rose flavored sugar syrup", Price = 90m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 5 };
+
+        context.MenuItems.AddRange(paneerTikka, dalMakhani, butterNaan, chickenBiryani, coldDrink, coldCoffee, gulabJamun);
+        context.SaveChanges();
+
+        // 5. Seed Inventory Items
+        var paneerStock = new InventoryItem { Name = "Paneer", Category = "Dairy", Unit = "KG", CurrentStock = 25.0m, MinimumStock = 10.0m, UnitCost = 350m, ReorderLevel = 12m };
+        var tomatoStock = new InventoryItem { Name = "Tomato", Category = "Vegetables", Unit = "KG", CurrentStock = 4.5m, MinimumStock = 10.0m, UnitCost = 40m, ReorderLevel = 15m }; // Low Stock
+        var oilStock = new InventoryItem { Name = "Cooking Oil", Category = "Grocery", Unit = "L", CurrentStock = 1.5m, MinimumStock = 10.0m, UnitCost = 140m, ReorderLevel = 12m }; // Critical
+        var riceStock = new InventoryItem { Name = "Basmati Rice", Category = "Grocery", Unit = "KG", CurrentStock = 50.0m, MinimumStock = 20.0m, UnitCost = 110m, ReorderLevel = 25m };
+
+        context.InventoryItems.AddRange(paneerStock, tomatoStock, oilStock, riceStock);
+        context.SaveChanges();
+
+        // 6. Seed Customers & Loyalty
+        var customer1 = new Customer
+        {
+            Name = "Rahul Sharma",
+            Phone = "9876543210",
+            Email = "rahul.sharma@example.com",
+            Address = "Satellite, Ahmedabad",
+            TotalVisits = 12,
+            TotalSpent = 25500m,
+            LoyaltyPoints = 850,
+            Tier = LoyaltyTier.Gold,
+            LastVisitDate = DateTime.UtcNow.AddDays(-2)
+        };
+        context.Customers.Add(customer1);
+        context.SaveChanges();
+
+        // 7. Seed Active Order on Table 05
+        var sampleOrder = new Order
+        {
+            OrderNumber = "ORD-1025",
+            OrderType = OrderType.DineIn,
+            Status = OrderStatus.Confirmed,
+            TableId = t5.Id,
+            WaiterId = waiter.Id,
+            CustomerId = customer1.Id,
+            CustomerName = customer1.Name,
+            CustomerPhone = customer1.Phone,
+            SpecialInstructions = "Less spicy for Paneer Tikka",
+            SubTotal = 1070m,
+            CGST = 26.75m,
+            SGST = 26.75m,
+            TotalTax = 53.50m,
+            DiscountAmount = 0m,
+            GrandTotal = 1123.50m,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-35)
+        };
+
+        sampleOrder.Items.Add(new OrderItem { MenuItemId = paneerTikka.Id, ItemName = "Paneer Tikka", UnitPrice = 250m, Quantity = 2, TotalPrice = 500m, SpecialInstructions = "Less spicy" });
+        sampleOrder.Items.Add(new OrderItem { MenuItemId = butterNaan.Id, ItemName = "Butter Naan", UnitPrice = 50m, Quantity = 4, TotalPrice = 200m });
+        sampleOrder.Items.Add(new OrderItem { MenuItemId = dalMakhani.Id, ItemName = "Dal Makhani", UnitPrice = 250m, Quantity = 1, TotalPrice = 250m });
+        sampleOrder.Items.Add(new OrderItem { MenuItemId = coldDrink.Id, ItemName = "Cold Drink / Soda", UnitPrice = 60m, Quantity = 2, TotalPrice = 120m });
+
+        context.Orders.Add(sampleOrder);
+        context.SaveChanges();
+
+        t5.CurrentOrderId = sampleOrder.Id;
+        context.Tables.Update(t5);
+
+        // 8. Seed KOT for Order 1025
+        var kot1 = new KOT
+        {
+            KOTNumber = "KOT-1025",
+            OrderId = sampleOrder.Id,
+            TableNumber = "Table 05",
+            WaiterName = waiter.FullName,
+            Status = KOTStatus.Preparing,
+            Notes = "Less spicy",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-30)
+        };
+
+        kot1.Items.Add(new KOTItem { MenuItemName = "Paneer Tikka", Quantity = 2, SpecialInstructions = "Less spicy", Status = KOTStatus.Preparing });
+        kot1.Items.Add(new KOTItem { MenuItemName = "Butter Naan", Quantity = 4, Status = KOTStatus.New });
+        kot1.Items.Add(new KOTItem { MenuItemName = "Dal Makhani", Quantity = 1, Status = KOTStatus.Preparing });
+
+        context.KOTs.Add(kot1);
+
+        // 9. Seed Employees & Expenses
+        context.Employees.Add(new Employee { Name = "Amit Kumar", Email = "amit@spicegarden.com", Phone = "9876500004", Role = UserRole.Waiter, BaseSalary = 18000m, Shift = "Morning" });
+        context.Employees.Add(new Employee { Name = "Sunita Sharma", Email = "sunita@spicegarden.com", Phone = "9876500005", Role = UserRole.KitchenStaff, BaseSalary = 25000m, Shift = "Morning" });
+
+        context.Expenses.Add(new Expense { Category = "Electricity", Description = "Monthly electricity bill", Amount = 12500m, ExpenseDate = DateTime.UtcNow.AddDays(-5), RecordedBy = "Admin" });
+
+        context.SaveChanges();
+    }
+}

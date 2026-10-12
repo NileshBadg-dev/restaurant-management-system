@@ -207,8 +207,11 @@
                                 <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Tables" class="btn btn-sm btn-outline-primary px-2 py-0 rounded-pill flex-fill" style="font-size: 0.7rem;" title="Add Items">
                                     <i class="fa-solid fa-plus"></i> Add
                                 </a>
-                                <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm text-white px-2 py-0 rounded-pill flex-fill fw-bold" style="font-size: 0.7rem; background:#7c3aed;" title="Settle Payment">
-                                    Settle
+                                <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-primary px-2 py-0 rounded-pill flex-fill" style="font-size: 0.7rem;" title="View Order">
+                                    Order
+                                </a>
+                                <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm btn-warning px-2 py-0 rounded-pill flex-fill text-dark fw-bold" style="font-size: 0.7rem;" title="View Bill & Settle">
+                                    Bill
                                 </a>
                             }
                                 <!-- Mark Available button is ACTIVE to release -->

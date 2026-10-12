@@ -9,6 +9,7 @@
         TableStatus.Billing => "badge-billing",
         _ => "badge-cleaning"
     };
+    string cleanTableNo = (Model.TableNumber ?? "").Replace("Table", "").Trim();
 }
 
 <!-- Breadcrumb & Top Bar -->
@@ -27,13 +28,13 @@
                     </a>
                 </li>
                 <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
-                    @Model.TableNumber
+                    Table @cleanTableNo
                 </li>
             </ol>
         </nav>
         <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
             <i class="fa-solid fa-chair text-warning"></i>
-            <span>@Model.TableNumber</span>
+            <span>Table @cleanTableNo</span>
             <span class="status-badge @badgeClass fs-6 ms-2">@Model.StatusName</span>
         </h2>
     </div>
@@ -76,8 +77,19 @@
 
                 <div class="p-3 rounded-3 border mb-4 bg-light">
                     <div class="small text-secondary fw-semibold">Current Active Bill:</div>
-                    <div class="fs-2 fw-bold text-success">₹@(currentOrder?.GrandTotal.ToString("N0") ?? Model.CurrentOrderAmount.ToString("N0"))</div>
-                    <div class="small metric-desc-text">Includes GST 5% and applied discounts</div>
+                    @{
+                        decimal activeAmt = currentOrder?.GrandTotal ?? Model.CurrentOrderAmount;
+                    }
+                    @if (activeAmt > 0)
+                    {
+                        <div class="fs-2 fw-bold text-success">₹@activeAmt.ToString("N0")</div>
+                        <div class="small metric-desc-text">Includes GST 5% and applied discounts</div>
+                    }
+                    else
+                    {
+                        <div class="fs-4 fw-bold text-muted fst-italic">No items yet</div>
+                        <div class="small metric-desc-text">Add dishes via POS to build order</div>
+                    }
                 </div>
             </div>
 

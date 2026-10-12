@@ -115,6 +115,9 @@
                     <span class="badge rounded-pill" style="background: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 0.725rem;">
                         @Model.ReservedTablesCount Reserved
                     </span>
+                    <span class="badge rounded-pill" style="background: #ede9fe; color: #6d28d9; border: 1.5px solid #c4b5fd; font-weight: 600; font-size: 0.725rem;">
+                        @Model.FloorTables.SelectMany(f => f.Tables).Count(t => t.Status == TableStatus.Billing) Billing
+                    </span>
                 </div>
                 <div>
                     <a href="/Tables" class="fw-bold text-decoration-none small" style="color: #047857;">
@@ -136,12 +139,13 @@
                             TableStatus.Billing => "billing",
                             _ => "cleaning"
                         };
+                        string cleanNum = (table.TableNumber ?? "").Replace("Table", "").Trim();
 
                         <div class="col-md-4 col-sm-6">
                             <div class="table-tile-card status-@statusKey">
                                 <!-- Top Row: Table Name & Status Badge -->
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold fs-6 text-dark">Table @table.TableNumber</span>
+                                    <span class="fw-bold fs-6 text-dark">Table @cleanNum</span>
                                     @if (table.Status == TableStatus.Available)
                                     {
                                         <span class="badge status-pill-available">AVAILABLE</span>
@@ -182,7 +186,14 @@
                                 {
                                     <div class="d-flex justify-content-between align-items-center mb-2 small">
                                         <span class="text-muted">Bill</span>
-                                        <span class="fw-bold text-dark fs-6">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                                        @if (table.CurrentOrderAmount > 0)
+                                        {
+                                            <span class="fw-bold text-dark fs-6">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fw-semibold small fst-italic">No items yet</span>
+                                        }
                                     </div>
                                     <div class="d-flex gap-1">
                                         <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
@@ -205,9 +216,18 @@
                                     </div>
                                     <div class="d-flex gap-1">
                                         <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
-                                        <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-bill px-3">Bill</a>
+                                        <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-settle px-3">Settle</a>
                                     </div>
                                 }
+                                else
+                                {
+                                    <div class="text-muted small mb-2" style="font-size: 0.75rem;">Cleaning in progress</div>
+                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm w-100 rounded-pill fw-bold py-1 btn-table-view">
+                                        Details
+                                    </a>
+                                }
+                            </div>
+                        </div>
                                 else
                                 {
                                     <div class="text-muted small mb-2" style="font-size: 0.75rem;">Cleaning in progress</div>
@@ -253,10 +273,10 @@
                     <div>
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="small fw-semibold text-dark">@(i + 1). @item.MenuItemName</span>
-                            <span class="small text-muted fw-bold">@item.TotalQuantitySold</span>
+                            <span class="small text-muted fw-bold">@item.TotalQuantitySold <span class="text-success small fw-semibold">(@pct%)</span></span>
                         </div>
                         <div class="progress" style="height: 6px; background-color: #f1f5f9; border-radius: 4px;">
-                            <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: #059669; border-radius: 4px;"></div>
+                            <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: #059669; border-radius: 4px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                     </div>
                 }
@@ -279,10 +299,10 @@
                 var displayOrders = Model.RecentOrders != null && Model.RecentOrders.Any()
                     ? Model.RecentOrders.Take(5).ToList()
                     : new List<RecentOrderSummaryDto> {
-                        new() { OrderNumber = "ORD-1025", OrderType = "Dine-In", TableNumber = "05", TotalItems = 9, GrandTotal = 1124, Status = "Confirmed", CreatedAt = DateTime.Today.AddHours(14).AddMinutes(22) },
+                        new() { OrderNumber = "ORD-1025", OrderType = "Dine-in", TableNumber = "05", TotalItems = 9, GrandTotal = 1124, Status = "Confirmed", CreatedAt = DateTime.Today.AddHours(14).AddMinutes(22) },
                         new() { OrderNumber = "ORD-1024", OrderType = "Takeaway", TableNumber = "", TotalItems = 3, GrandTotal = 480, Status = "Ready", CreatedAt = DateTime.Today.AddHours(13).AddMinutes(37) },
-                        new() { OrderNumber = "ORD-1023", OrderType = "Dine-In", TableNumber = "01", TotalItems = 4, GrandTotal = 1240, Status = "Served", CreatedAt = DateTime.Today.AddHours(13).AddMinutes(25) },
-                        new() { OrderNumber = "ORD-1022", OrderType = "Dine-In", TableNumber = "02", TotalItems = 2, GrandTotal = 620, Status = "Preparing", CreatedAt = DateTime.Today.AddHours(12).AddMinutes(42) },
+                        new() { OrderNumber = "ORD-1023", OrderType = "Dine-in", TableNumber = "01", TotalItems = 4, GrandTotal = 1240, Status = "Served", CreatedAt = DateTime.Today.AddHours(13).AddMinutes(25) },
+                        new() { OrderNumber = "ORD-1022", OrderType = "Dine-in", TableNumber = "02", TotalItems = 2, GrandTotal = 620, Status = "Preparing", CreatedAt = DateTime.Today.AddHours(12).AddMinutes(42) },
                         new() { OrderNumber = "ORD-1021", OrderType = "Takeaway", TableNumber = "", TotalItems = 1, GrandTotal = 320, Status = "Ready", CreatedAt = DateTime.Today.AddHours(12).AddMinutes(10) }
                     };
             }
@@ -311,10 +331,13 @@
                                 _ => "background: #f1f5f9; color: #475569; border: 1pt solid #e2e8f0;"
                             };
 
+                            string orderTypeDisplay = (ord.OrderType == "DineIn" || ord.OrderType == "Dine-In") ? "Dine-in" : ord.OrderType;
+                            string tableDisplay = string.IsNullOrEmpty(ord.TableNumber) ? "-" : "T" + ord.TableNumber.Replace("Table", "").Trim();
+
                             <tr>
                                 <td class="fw-bold text-dark">#@ord.OrderNumber</td>
-                                <td class="text-secondary small">@ord.OrderType</td>
-                                <td class="text-secondary small">@(string.IsNullOrEmpty(ord.TableNumber) ? "-" : "T-" + ord.TableNumber)</td>
+                                <td class="text-secondary small">@orderTypeDisplay</td>
+                                <td class="text-secondary small">@tableDisplay</td>
                                 <td class="text-secondary small">@ord.TotalItems</td>
                                 <td class="fw-bold text-dark small">₹@ord.GrandTotal.ToString("N0")</td>
                                 <td>

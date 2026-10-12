@@ -382,6 +382,8 @@ public class DashboardService : IDashboardService
             deliveryCount = activeOrders.Count(o => o.OrderType == OrderType.Delivery);
         }
 
+        int totalOrdersCalculated = dineInCount + takeawayCount + deliveryCount;
+
         var allEmployees = (await _unitOfWork.Employees.GetAllAsync()).Where(e => !e.IsDeleted).ToList();
         var todayAttendances = (await _unitOfWork.Attendances.FindAsync(a => a.Date == today && !a.IsDeleted && a.Status == "Present")).ToList();
 
@@ -419,7 +421,7 @@ public class DashboardService : IDashboardService
         int totalStaff = allEmployees.Count;
         int presentStaff = allEmployees.Count(e => todayAttendances.Any(a => a.EmployeeId == e.Id) || e.IsActive);
 
-        var tableDict = tables.ToDictionary(t => t.Id, t => t.TableNumber);
+        var tableDict = tables.ToDictionary(t => t.Id, t => t.TableNumber.Replace("Table", "").Trim());
         var orderItemQtyDict = orderItems.Where(i => !i.IsDeleted)
             .GroupBy(i => i.OrderId)
             .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
@@ -431,7 +433,7 @@ public class DashboardService : IDashboardService
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                OrderType = o.OrderType.ToString(),
+                OrderType = o.OrderType == OrderType.DineIn ? "Dine-in" : o.OrderType.ToString(),
                 Status = o.Status.ToString(),
                 TableId = o.TableId,
                 TableNumber = o.TableId.HasValue && tableDict.TryGetValue(o.TableId.Value, out var num) ? num : string.Empty,
@@ -445,7 +447,7 @@ public class DashboardService : IDashboardService
         {
             TodaySales = todaySales,
             YesterdaySales = yesterdaySales,
-            TodayOrdersCount = activeOrders.Count(o => o.CreatedAt.Date == today),
+            TodayOrdersCount = totalOrdersCalculated > 0 ? totalOrdersCalculated : (activeOrders.Count(o => o.CreatedAt.Date == today)),
             TotalTablesCount = totalTables,
             OccupiedTablesCount = occupiedTables,
             AvailableTablesCount = availableTables,

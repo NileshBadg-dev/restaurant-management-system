@@ -6,6 +6,45 @@
     var readyKots = Model.Where(k => k.Status == KOTStatus.Ready).ToList();
 }
 
+<style>
+    .kds-column {
+        background: #1e293b;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        min-height: 75vh;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
+    .kds-ticket {
+        background: #0f172a;
+        border-radius: 0.75rem;
+        padding: 1.1rem;
+        margin-bottom: 1.1rem;
+        border-left: 5px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kds-ticket:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+    }
+    .age-badge-green {
+        background-color: #059669;
+        color: #ffffff;
+    }
+    .age-badge-amber {
+        background-color: #d97706;
+        color: #ffffff;
+    }
+    .age-badge-red {
+        background-color: #dc2626;
+        color: #ffffff;
+        animation: pulseRed 1.5s infinite;
+    }
+    @@keyframes pulseRed {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.65; }
+    }
+</style>
+
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
     <div>
         <nav aria-label="breadcrumb">
@@ -46,16 +85,27 @@
             @if (!newKots.Any())
             {
                 <div class="text-center py-5 text-secondary">
-                    <i class="fa-solid fa-check-circle fs-2 mb-2"></i>
-                    <p class="small mb-0">No new KOT orders in queue.</p>
+                    <i class="fa-solid fa-check-circle fs-2 mb-2 text-muted"></i>
+                    <p class="small mb-0 text-muted">No new KOT orders in queue.</p>
                 </div>
             }
             @foreach (var kot in newKots)
             {
+                var cleanTable = kot.TableNumber?.Replace("Table", "").Trim();
+                var elapsedMins = (int)Math.Max(0, (DateTime.UtcNow - kot.CreatedAt).TotalMinutes);
+                string ageClass = elapsedMins < 10 ? "age-badge-green" : (elapsedMins <= 20 ? "age-badge-amber" : "age-badge-red");
+                var itemsJson = System.Text.Json.JsonSerializer.Serialize(kot.Items.Select(i => new { i.Quantity, i.MenuItemName, i.SpecialInstructions }));
+
                 <div class="kds-ticket" style="border-left-color: #0dcaf0;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
-                        <span class="badge bg-info text-dark">Table: @kot.TableNumber</span>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="badge @ageClass fw-semibold px-2 py-1"><i class="fa-solid fa-clock me-1"></i>@elapsedMins m</span>
+                            <span class="badge bg-info text-dark fw-bold">Table @cleanTable</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2" title="Print KOT Slip" onclick="printKotSlip('@kot.KOTNumber', '@cleanTable', '@kot.WaiterName', '@kot.CreatedAt.ToString("g")', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(itemsJson)), '@kot.Notes')">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="small text-secondary mb-2">
                         <span>Waiter: @kot.WaiterName</span> &bull; <span>Time: @kot.CreatedAt.ToString("t")</span>
@@ -65,9 +115,12 @@
                         @foreach (var item in kot.Items)
                         {
                             <div class="d-flex justify-content-between text-white fw-semibold mb-1">
-                                <span>@item.MenuItemName</span>
-                                <span class="badge bg-warning text-dark fs-6">x@item.Quantity</span>
+                                <span><span class="badge bg-warning text-dark me-2">@item.Quantity x</span>@item.MenuItemName</span>
                             </div>
+                            @if (!string.IsNullOrEmpty(item.SpecialInstructions))
+                            {
+                                <div class="small text-info ps-3 mb-1"><i class="fa-solid fa-comment-dots me-1"></i>@item.SpecialInstructions</div>
+                            }
                         }
                     </div>
 
@@ -101,16 +154,27 @@
             @if (!prepKots.Any())
             {
                 <div class="text-center py-5 text-secondary">
-                    <i class="fa-solid fa-utensils fs-2 mb-2"></i>
-                    <p class="small mb-0">No orders currently cooking.</p>
+                    <i class="fa-solid fa-utensils fs-2 mb-2 text-muted"></i>
+                    <p class="small mb-0 text-muted">No orders currently cooking.</p>
                 </div>
             }
             @foreach (var kot in prepKots)
             {
+                var cleanTable = kot.TableNumber?.Replace("Table", "").Trim();
+                var elapsedMins = (int)Math.Max(0, (DateTime.UtcNow - kot.CreatedAt).TotalMinutes);
+                string ageClass = elapsedMins < 10 ? "age-badge-green" : (elapsedMins <= 20 ? "age-badge-amber" : "age-badge-red");
+                var itemsJson = System.Text.Json.JsonSerializer.Serialize(kot.Items.Select(i => new { i.Quantity, i.MenuItemName, i.SpecialInstructions }));
+
                 <div class="kds-ticket" style="border-left-color: #ffc107;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
-                        <span class="badge bg-warning text-dark">Table: @kot.TableNumber</span>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="badge @ageClass fw-semibold px-2 py-1"><i class="fa-solid fa-clock me-1"></i>@elapsedMins m</span>
+                            <span class="badge bg-warning text-dark fw-bold">Table @cleanTable</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2" title="Print KOT Slip" onclick="printKotSlip('@kot.KOTNumber', '@cleanTable', '@kot.WaiterName', '@kot.CreatedAt.ToString("g")', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(itemsJson)), '@kot.Notes')">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="small text-secondary mb-2">
                         <span>Waiter: @kot.WaiterName</span> &bull; <span>Time: @kot.CreatedAt.ToString("t")</span>
@@ -120,9 +184,12 @@
                         @foreach (var item in kot.Items)
                         {
                             <div class="d-flex justify-content-between text-white fw-semibold mb-1">
-                                <span>@item.MenuItemName</span>
-                                <span class="badge bg-warning text-dark fs-6">x@item.Quantity</span>
+                                <span><span class="badge bg-warning text-dark me-2">@item.Quantity x</span>@item.MenuItemName</span>
                             </div>
+                            @if (!string.IsNullOrEmpty(item.SpecialInstructions))
+                            {
+                                <div class="small text-info ps-3 mb-1"><i class="fa-solid fa-comment-dots me-1"></i>@item.SpecialInstructions</div>
+                            }
                         }
                     </div>
 
@@ -149,16 +216,27 @@
             @if (!readyKots.Any())
             {
                 <div class="text-center py-5 text-secondary">
-                    <i class="fa-solid fa-clock fs-2 mb-2"></i>
-                    <p class="small mb-0">No prepared food waiting for pickup.</p>
+                    <i class="fa-solid fa-clock fs-2 mb-2 text-muted"></i>
+                    <p class="small mb-0 text-muted">No prepared food waiting for pickup.</p>
                 </div>
             }
             @foreach (var kot in readyKots)
             {
+                var cleanTable = kot.TableNumber?.Replace("Table", "").Trim();
+                var elapsedMins = (int)Math.Max(0, (DateTime.UtcNow - kot.CreatedAt).TotalMinutes);
+                string ageClass = elapsedMins < 10 ? "age-badge-green" : (elapsedMins <= 20 ? "age-badge-amber" : "age-badge-red");
+                var itemsJson = System.Text.Json.JsonSerializer.Serialize(kot.Items.Select(i => new { i.Quantity, i.MenuItemName, i.SpecialInstructions }));
+
                 <div class="kds-ticket" style="border-left-color: #198754;">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="fw-bold text-white fs-5">@kot.KOTNumber</span>
-                        <span class="badge bg-success">Table: @kot.TableNumber</span>
+                        <div class="d-flex gap-1 align-items-center">
+                            <span class="badge @ageClass fw-semibold px-2 py-1"><i class="fa-solid fa-clock me-1"></i>@elapsedMins m</span>
+                            <span class="badge bg-success text-white fw-bold">Table @cleanTable</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary text-white py-0 px-2" title="Print KOT Slip" onclick="printKotSlip('@kot.KOTNumber', '@cleanTable', '@kot.WaiterName', '@kot.CreatedAt.ToString("g")', @Html.Raw(System.Text.Json.JsonSerializer.Serialize(itemsJson)), '@kot.Notes')">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        </div>
                     </div>
                     <div class="small text-secondary mb-2">
                         <span>Waiter: @kot.WaiterName</span>
@@ -168,9 +246,12 @@
                         @foreach (var item in kot.Items)
                         {
                             <div class="d-flex justify-content-between text-white fw-semibold mb-1">
-                                <span>@item.MenuItemName</span>
-                                <span class="badge bg-success fs-6">x@item.Quantity</span>
+                                <span><span class="badge bg-success fs-6 me-2">@item.Quantity x</span>@item.MenuItemName</span>
                             </div>
+                            @if (!string.IsNullOrEmpty(item.SpecialInstructions))
+                            {
+                                <div class="small text-info ps-3 mb-1"><i class="fa-solid fa-comment-dots me-1"></i>@item.SpecialInstructions</div>
+                            }
                         }
                     </div>
 
@@ -186,3 +267,57 @@
         </div>
     </div>
 </div>
+
+<script>
+    function printKotSlip(kotNumber, tableNum, waiter, time, itemsJsonRaw, notes) {
+        try {
+            const items = JSON.parse(itemsJsonRaw);
+            const win = window.open('', '_blank', 'width=380,height=600');
+            if (!win) {
+                alert('Pop-up blocked. Please allow pop-ups for KOT printing.');
+                return;
+            }
+            let itemsHtml = items.map(i => `
+                <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:15px; margin:5px 0;">
+                    <span>${i.Quantity} x ${i.MenuItemName}</span>
+                </div>
+                ${i.SpecialInstructions ? `<div style="font-size:12px; color:#444; margin-left:12px;">* ${i.SpecialInstructions}</div>` : ''}
+            `).join('');
+
+            win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>KOT - ${kotNumber}</title>
+                    <style>
+                        @@page { size: 80mm auto; margin: 0; }
+                        body { font-family: monospace; width: 72mm; margin: 0 auto; padding: 12px 0; font-size: 13px; color: #000; }
+                        .center { text-align: center; }
+                        .bold { font-weight: bold; }
+                        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+                        .kot-num { font-size: 22px; font-weight: 900; margin: 4px 0; }
+                        .table-num { font-size: 18px; font-weight: bold; }
+                    </style>
+                </head>
+                <body onload="window.print(); window.close();">
+                    <div class="center bold">GIRANA GARDEN RESTAURANT</div>
+                    <div class="center kot-num">${kotNumber}</div>
+                    <div class="center table-num">TABLE: ${tableNum}</div>
+                    <div class="divider"></div>
+                    <div><strong>Waiter:</strong> ${waiter || 'General'}</div>
+                    <div><strong>Time:</strong> ${time}</div>
+                    <div class="divider"></div>
+                    ${itemsHtml}
+                    ${notes ? `<div class="divider"></div><div><strong>Special Note:</strong> ${notes}</div>` : ''}
+                    <div class="divider"></div>
+                    <div class="center bold" style="font-size:11px;">KITCHEN ORDER TICKET (ESC/POS)</div>
+                </body>
+                </html>
+            `);
+            win.document.close();
+        } catch (e) {
+            console.error('KOT Print Error', e);
+        }
+    }
+</script>
+

@@ -78,6 +78,11 @@
                         <span class="nav-text">Stock</span>
                     </a>
 
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Staff" ? "active" : "")" href="/Staff" data-title="Staff & Attendance" data-bs-toggle="tooltip" data-bs-placement="right" title="Staff & Attendance">
+                        <i class="fa-solid fa-user-group nav-icon" style="color: #6366f1;"></i>
+                        <span class="nav-text">Staff & Attendance</span>
+                    </a>
+
                     <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")" href="/Reports" data-title="Reports & Analytics" data-bs-toggle="tooltip" data-bs-placement="right" title="Reports & Analytics">
                         <i class="fa-solid fa-chart-line nav-icon" style="color: #d97706;"></i>
                         <span class="nav-text">Reports</span>

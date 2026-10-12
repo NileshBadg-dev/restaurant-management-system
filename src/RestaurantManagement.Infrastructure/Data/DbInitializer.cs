@@ -46,17 +46,17 @@ public static class DbInitializer
         context.Floors.AddRange(groundFloor, firstFloor, outdoor);
         context.SaveChanges();
 
-        var t1 = new Table { TableNumber = "Table 01", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t2 = new Table { TableNumber = "Table 02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
-        var t3 = new Table { TableNumber = "Table 03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Reserved };
-        var t4 = new Table { TableNumber = "Table 04", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t5 = new Table { TableNumber = "Table 05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
+        var t1 = new Table { TableNumber = "01", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t2 = new Table { TableNumber = "02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
+        var t3 = new Table { TableNumber = "03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Reserved };
+        var t4 = new Table { TableNumber = "04", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t5 = new Table { TableNumber = "05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Billing, WaiterId = waiter.Id };
         
-        var t11 = new Table { TableNumber = "Table 11", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
-        var t12 = new Table { TableNumber = "Table 12", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        var t11 = new Table { TableNumber = "11", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        var t12 = new Table { TableNumber = "12", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
         
-        var t21 = new Table { TableNumber = "Table 21", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
-        var t22 = new Table { TableNumber = "Table 22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Reserved };
+        var t21 = new Table { TableNumber = "21", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
+        var t22 = new Table { TableNumber = "22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Reserved };
 
         context.Tables.AddRange(t1, t2, t3, t4, t5, t11, t12, t21, t22);
         context.SaveChanges();
@@ -139,12 +139,26 @@ public static class DbInitializer
         t5.CurrentOrderId = sampleOrder.Id;
         context.Tables.Update(t5);
 
+        // Seed initial Bill for Order 1025 on Table 05 (Status: Billing)
+        var sampleBill = new Bill
+        {
+            InvoiceNumber = "INV-2026-000125",
+            OrderId = sampleOrder.Id,
+            BillDate = DateTime.UtcNow.AddMinutes(-10),
+            SubTotal = sampleOrder.SubTotal,
+            CGST = sampleOrder.CGST,
+            SGST = sampleOrder.SGST,
+            GrandTotal = sampleOrder.GrandTotal,
+            IsPaid = false
+        };
+        context.Bills.Add(sampleBill);
+
         // 8. Seed KOT for Order 1025
         var kot1 = new KOT
         {
             KOTNumber = "KOT-1025",
             OrderId = sampleOrder.Id,
-            TableNumber = "Table 05",
+            TableNumber = "05",
             WaiterName = waiter.FullName,
             Status = KOTStatus.Preparing,
             Notes = "Less spicy",

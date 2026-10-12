@@ -204,6 +204,57 @@ public class TableService : ITableService
         };
     }
 
+    public async Task<FloorDto?> GetFloorByIdAsync(int id)
+    {
+        var floor = await _unitOfWork.Floors.GetByIdAsync(id);
+        if (floor == null || floor.IsDeleted) return null;
+
+        var tables = await _unitOfWork.Tables.FindAsync(t => t.FloorId == id && !t.IsDeleted);
+
+        return new FloorDto
+        {
+            Id = floor.Id,
+            Name = floor.Name,
+            Description = floor.Description,
+            DisplayOrder = floor.DisplayOrder,
+            Tables = tables.Select(t => MapToTableDto(t, floor.Name)).ToList()
+        };
+    }
+
+    public async Task<FloorDto> UpdateFloorAsync(int id, FloorCreateUpdateDto dto)
+    {
+        var floor = await _unitOfWork.Floors.GetByIdAsync(id);
+        if (floor == null || floor.IsDeleted) throw new KeyNotFoundException($"Floor with id {id} not found.");
+
+        floor.Name = dto.Name;
+        floor.Description = dto.Description;
+        floor.DisplayOrder = dto.DisplayOrder;
+        floor.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Floors.UpdateAsync(floor);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new FloorDto
+        {
+            Id = floor.Id,
+            Name = floor.Name,
+            Description = floor.Description,
+            DisplayOrder = floor.DisplayOrder
+        };
+    }
+
+    public async Task<bool> DeleteFloorAsync(int id)
+    {
+        var floor = await _unitOfWork.Floors.GetByIdAsync(id);
+        if (floor == null || floor.IsDeleted) return false;
+
+        floor.IsDeleted = true;
+        floor.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Floors.UpdateAsync(floor);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+
     private static TableDto MapToTableDto(Table t, string floorName, Dictionary<int, Order>? orderDict = null, Dictionary<int, User>? userDict = null)
     {
         decimal amount = 0m;

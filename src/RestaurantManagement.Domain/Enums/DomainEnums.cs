@@ -7,7 +7,9 @@ public enum UserRole
     Cashier = 3,
     Waiter = 4,
     KitchenStaff = 5,
-    InventoryStaff = 6
+    InventoryStaff = 6,
+    Cook = 7,
+    Housekeeping = 8
 }
 
 public enum TableStatus

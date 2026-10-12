@@ -2,42 +2,90 @@
 @{
     ViewData["Title"] = $"Table Details - {Model.TableNumber}";
     var currentOrder = ViewBag.CurrentOrder as OrderDto;
+    string badgeClass = Model.Status switch {
+        TableStatus.Available => "badge-available",
+        TableStatus.Occupied => "badge-occupied",
+        TableStatus.Reserved => "badge-reserved",
+        TableStatus.Billing => "badge-billing",
+        _ => "badge-cleaning"
+    };
 }
 
-<div class="row mb-4">
-    <div class="col-md-8">
-        <a href="/Tables" class="btn btn-outline-secondary btn-sm rounded-pill mb-2"><i class="fa-solid fa-arrow-left me-1"></i> Back to Floor Plan</a>
-        <h2 class="fw-bold mb-1"><i class="fa-solid fa-chair text-warning me-2"></i>@Model.TableNumber</h2>
-        <p class="text-secondary mb-0">Floor: <strong>@Model.FloorName</strong> &bull; Capacity: <strong>@Model.Capacity Guests</strong></p>
+<!-- Breadcrumb & Top Bar -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 fs-6">
+                <li class="breadcrumb-item">
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success" data-bs-toggle="tooltip" title="Return to Dashboard">
+                        <i class="fa-solid fa-chart-pie me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="/Tables" class="text-decoration-none fw-semibold text-warning" data-bs-toggle="tooltip" title="Return to Tables & Floor">
+                        <i class="fa-solid fa-chair me-1"></i> Tables & Floor
+                    </a>
+                </li>
+                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
+                    @Model.TableNumber
+                </li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+            <i class="fa-solid fa-chair text-warning"></i>
+            <span>@Model.TableNumber</span>
+            <span class="status-badge @badgeClass fs-6 ms-2">@Model.StatusName</span>
+        </h2>
     </div>
-    <div class="col-md-4 text-md-end align-self-end">
-        <span class="badge bg-warning text-dark fs-5 px-3 py-2">Status: @Model.StatusName</span>
+    <div>
+        <a href="/Tables" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm" data-bs-toggle="tooltip" title="Back to floor layout">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Floor Plan
+        </a>
     </div>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 animated-fade-in">
     <!-- Left Column: Table Details & Actions -->
     <div class="col-lg-5">
-        <div class="glass-card p-4">
-            <h5 class="fw-bold mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-sliders text-info me-2"></i>Table Actions</h5>
-            
-            <div class="mb-4">
-                <div class="small text-secondary">Customer:</div>
-                <div class="fw-bold text-white fs-5">@(currentOrder?.CustomerName ?? "Rahul Sharma (Guest)")</div>
-                <div class="small text-secondary">Phone: @(currentOrder?.CustomerPhone ?? "9876543210")</div>
-            </div>
+        <div class="glass-card p-4 h-100 d-flex flex-column justify-content-between">
+            <div>
+                <h5 class="fw-bold mb-3 border-bottom pb-2 text-dark">
+                    <i class="fa-solid fa-sliders text-primary me-2"></i>Table Status & Actions
+                </h5>
+                
+                <div class="bg-light p-3 rounded-3 border mb-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <span class="small text-secondary">Customer:</span>
+                            <div class="fw-bold text-dark fs-6">@(currentOrder?.CustomerName ?? "Guest Customer")</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="small text-secondary">Phone:</span>
+                            <div class="fw-bold text-dark fs-6">@(currentOrder?.CustomerPhone ?? "—")</div>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="small text-secondary">Assigned Waiter:</span>
+                            <div class="fw-bold text-dark">@(Model.WaiterName ?? "Amit Kumar")</div>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <span class="small text-secondary">Order Number:</span>
+                            <div class="fw-bold text-dark">@(currentOrder?.OrderNumber ?? "None")</div>
+                        </div>
+                    </div>
+                </div>
 
-            <div class="mb-4">
-                <div class="small text-secondary">Current Active Order:</div>
-                <div class="fs-2 fw-bold text-warning">₹@(currentOrder?.GrandTotal.ToString("N0") ?? Model.CurrentOrderAmount.ToString("N0"))</div>
-                <div class="small text-secondary">Order #: @(currentOrder?.OrderNumber ?? "N/A")</div>
+                <div class="p-3 rounded-3 border mb-4 bg-light">
+                    <div class="small text-secondary fw-semibold">Current Active Bill:</div>
+                    <div class="fs-2 fw-bold text-success">₹@(currentOrder?.GrandTotal.ToString("N0") ?? Model.CurrentOrderAmount.ToString("N0"))</div>
+                    <div class="small metric-desc-text">Includes GST 5% and applied discounts</div>
+                </div>
             </div>
 
             <!-- Action Buttons Grid -->
-            <div class="d-grid gap-2">
+            <div class="d-grid gap-2 border-top pt-3">
                 @if (Model.Status == TableStatus.Occupied || Model.Status == TableStatus.Billing)
                 {
-                    <a href="/Orders/POS?tableId=@Model.Id" class="btn btn-info rounded-pill fw-semibold py-2">
+                    <a href="/Orders/POS?tableId=@Model.Id&returnUrl=/Tables" class="btn btn-primary rounded-pill fw-semibold py-2 shadow-sm">
                         <i class="fa-solid fa-plus-circle me-1"></i> Add Items to Order
                     </a>
                     
@@ -45,57 +93,84 @@
                     {
                         <form asp-controller="Orders" asp-action="GenerateKOT" method="post" class="d-grid">
                             <input type="hidden" name="orderId" value="@currentOrder.Id" />
-                            <button type="submit" class="btn btn-warning rounded-pill fw-semibold py-2">
-                                <i class="fa-solid fa-receipt me-1"></i> Send KOT to Kitchen
+                            <button type="submit" class="btn btn-warning rounded-pill fw-semibold py-2 text-dark shadow-sm">
+                                <i class="fa-solid fa-fire text-danger me-1"></i> Send KOT to Kitchen
                             </button>
                         </form>
                     }
 
-                    <a href="/Billing/Generate?orderId=@(currentOrder?.Id ?? 0)" class="btn btn-success rounded-pill fw-semibold py-2">
-                        <i class="fa-solid fa-file-invoice-dollar me-1"></i> Generate Bill & Settle
+                    <a href="/Billing/Generate?orderId=@(currentOrder?.Id ?? 0)" class="btn btn-success rounded-pill fw-semibold py-2 shadow-sm">
+                        <i class="fa-solid fa-file-invoice-dollar me-1"></i> Settle Bill & Checkout
                     </a>
+
+                    <!-- Table is occupied/billing: Mark Available button is ENABLED to release -->
+                    <form asp-action="UpdateStatus" method="post" class="d-grid mt-2" onsubmit="return confirm('Mark table @Model.TableNumber available and release active seating?');">
+                        <input type="hidden" name="tableId" value="@Model.Id" />
+                        <input type="hidden" name="status" value="@TableStatus.Available" />
+                        <button type="submit" class="btn btn-outline-danger rounded-pill fw-semibold py-2" data-bs-toggle="tooltip" title="Release table and mark available">
+                            <i class="fa-solid fa-circle-check me-1"></i> Mark Table Available (Release)
+                        </button>
+                    </form>
+                }
+                else if (Model.Status == TableStatus.Available)
+                {
+                    <a href="/Orders/POS?tableId=@Model.Id&returnUrl=/Tables" class="btn btn-success rounded-pill fw-semibold py-2 shadow-sm">
+                        <i class="fa-solid fa-plus me-1"></i> Create New Order
+                    </a>
+
+                    <!-- REQUIREMENT: If table is available, DISABLE mark it available button -->
+                    <button type="button" class="btn btn-outline-secondary rounded-pill fw-semibold py-2 opacity-75" disabled data-bs-toggle="tooltip" title="Table is already available">
+                        <i class="fa-solid fa-circle-check me-1"></i> Table Is Available (Already Released)
+                    </button>
                 }
                 else
                 {
-                    <a href="/Orders/POS?tableId=@Model.Id" class="btn btn-success rounded-pill fw-semibold py-2">
-                        <i class="fa-solid fa-cart-plus me-1"></i> Create New Order
-                    </a>
+                    <!-- Reserved or Cleaning: can be marked Available -->
+                    <form asp-action="UpdateStatus" method="post" class="d-grid mt-2">
+                        <input type="hidden" name="tableId" value="@Model.Id" />
+                        <input type="hidden" name="status" value="@TableStatus.Available" />
+                        <button type="submit" class="btn btn-outline-success rounded-pill fw-semibold py-2" data-bs-toggle="tooltip" title="Mark table available">
+                            <i class="fa-solid fa-circle-check me-1"></i> Mark Table Available
+                        </button>
+                    </form>
                 }
-
-                <form asp-action="UpdateStatus" method="post" class="d-grid mt-3">
-                    <input type="hidden" name="tableId" value="@Model.Id" />
-                    <input type="hidden" name="status" value="@TableStatus.Available" />
-                    <button type="submit" class="btn btn-outline-danger rounded-pill fw-semibold py-2">
-                        <i class="fa-solid fa-circle-check me-1"></i> Mark Table Available (Release)
-                    </button>
-                </form>
             </div>
         </div>
     </div>
 
     <!-- Right Column: Current Order Items List -->
     <div class="col-lg-7">
-        <div class="glass-card p-4">
-            <h5 class="fw-bold mb-3 border-bottom border-secondary pb-2"><i class="fa-solid fa-utensils text-primary me-2"></i>Ordered Items Summary</h5>
+        <div class="glass-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fa-solid fa-utensils text-primary me-2"></i>Ordered Items Summary
+                </h5>
+                @if (currentOrder != null && currentOrder.Items.Any())
+                {
+                    <span class="badge bg-primary rounded-pill px-3 py-1">@currentOrder.Items.Count Items</span>
+                }
+            </div>
             
             @if (currentOrder == null || !currentOrder.Items.Any())
             {
-                <div class="text-center py-5 text-secondary">
-                    <i class="fa-solid fa-bowl-rice fs-1 mb-3"></i>
-                    <p>No active items ordered for this table yet.</p>
-                    <a href="/Orders/POS?tableId=@Model.Id" class="btn btn-primary btn-sm rounded-pill px-4">Open POS Screen</a>
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-bowl-rice fs-1 mb-3 text-secondary opacity-50"></i>
+                    <p class="mb-2">No active items ordered for this table yet.</p>
+                    <a href="/Orders/POS?tableId=@Model.Id&returnUrl=/Tables" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm">
+                        <i class="fa-solid fa-plus me-1"></i> Open POS to Add Items
+                    </a>
                 </div>
             }
             else
             {
                 <div class="table-responsive">
-                    <table class="table table-dark table-hover align-middle">
-                        <thead>
-                            <tr class="text-secondary">
-                                <th>Item</th>
-                                <th>Qty</th>
+                    <table class="table app-datagrid align-middle">
+                        <thead class="table-light">
+                            <tr class="text-secondary small fw-bold">
+                                <th>Item Name</th>
+                                <th class="text-center">Qty</th>
                                 <th>Price</th>
-                                <th class="text-end">Total</th>
+                                <th class="text-end">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -103,34 +178,34 @@
                             {
                                 <tr>
                                     <td>
-                                        <div class="fw-bold text-white">@item.ItemName</div>
+                                        <div class="fw-bold text-dark">@item.ItemName</div>
                                         @if (!string.IsNullOrEmpty(item.SelectedVariantName))
                                         {
-                                            <span class="badge bg-secondary">@item.SelectedVariantName</span>
+                                            <span class="badge bg-light text-dark border small">@item.SelectedVariantName</span>
                                         }
                                         @if (!string.IsNullOrEmpty(item.SpecialInstructions))
                                         {
-                                            <div class="small text-warning"><i class="fa-solid fa-comment-dots me-1"></i>@item.SpecialInstructions</div>
+                                            <div class="small text-danger"><i class="fa-solid fa-comment-dots me-1"></i>@item.SpecialInstructions</div>
                                         }
                                     </td>
-                                    <td class="fw-bold">@item.Quantity</td>
+                                    <td class="text-center fw-bold">@item.Quantity</td>
                                     <td>₹@item.UnitPrice.ToString("N0")</td>
                                     <td class="text-end fw-bold text-success">₹@item.TotalPrice.ToString("N0")</td>
                                 </tr>
                             }
                         </tbody>
-                        <tfoot>
+                        <tfoot class="border-top">
                             <tr>
                                 <td colspan="3" class="text-end fw-bold text-secondary">Subtotal:</td>
-                                <td class="text-end fw-bold">₹@currentOrder.SubTotal.ToString("N0")</td>
+                                <td class="text-end fw-bold text-dark">₹@currentOrder.SubTotal.ToString("N0")</td>
                             </tr>
                             <tr>
                                 <td colspan="3" class="text-end fw-bold text-secondary">GST (5%):</td>
-                                <td class="text-end fw-bold">₹@currentOrder.TotalTax.ToString("N0")</td>
+                                <td class="text-end fw-bold text-dark">₹@currentOrder.TotalTax.ToString("N0")</td>
                             </tr>
                             <tr class="fs-5">
-                                <td colspan="3" class="text-end fw-bold text-warning">Grand Total:</td>
-                                <td class="text-end fw-bold text-warning">₹@currentOrder.GrandTotal.ToString("N0")</td>
+                                <td colspan="3" class="text-end fw-bold text-dark">Grand Total:</td>
+                                <td class="text-end fw-bold text-success">₹@currentOrder.GrandTotal.ToString("N0")</td>
                             </tr>
                         </tfoot>
                     </table>

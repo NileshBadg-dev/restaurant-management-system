@@ -1,59 +1,141 @@
 @model IEnumerable<FloorDto>
 @{
     ViewData["Title"] = "Table & Floor Management";
+    int totalTables = Model.Sum(f => f.Tables.Count);
+    int availableCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Available));
+    int occupiedCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Occupied));
+    int reservedCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Reserved));
+    int billingCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Billing));
 }
 
-<div class="row mb-4 align-items-center">
-    <div class="col-md-8">
-        <h2 class="fw-bold mb-1"><i class="fa-solid fa-chair text-info me-2"></i>Table & Floor Management</h2>
-        <p class="text-secondary mb-0">Click any table to view order details, add items, transfer, or generate bill.</p>
+<!-- Breadcrumb & Top Bar (Description removed) -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 animated-fade-in">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 fs-6">
+                <li class="breadcrumb-item">
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success" data-bs-toggle="tooltip" title="Return to Dashboard">
+                        <i class="fa-solid fa-chart-pie me-1"></i> Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
+                    <i class="fa-solid fa-chair text-warning me-1"></i> Tables & Floor Plan
+                </li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-chair text-warning me-2" data-bs-toggle="tooltip" title="Dining Floor and Table Layout"></i>Table & Floor Management
+        </h2>
     </div>
-    <div class="col-md-4 text-md-end">
-        <button class="btn btn-outline-light rounded-pill px-3 me-2" data-bs-toggle="modal" data-bs-target="#transferModal">
+    <div class="d-flex flex-wrap gap-2">
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Return to main dashboard">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <button class="btn btn-outline-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#transferModal" title="Transfer active order between tables">
             <i class="fa-solid fa-arrow-right-arrow-left me-1"></i> Transfer Table
         </button>
-        <button class="btn btn-outline-warning rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#mergeModal">
+        <button class="btn btn-outline-warning rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#mergeModal" title="Merge orders from two tables">
             <i class="fa-solid fa-code-merge me-1"></i> Merge Tables
         </button>
+        <a href="/Masters?tab=table" class="btn btn-primary rounded-pill px-3 shadow-sm" title="Configure tables in Masters">
+            <i class="fa-solid fa-gear me-1"></i> Configure Tables
+        </a>
     </div>
 </div>
 
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-3" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <div class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-3" role="alert">
         <i class="fa-solid fa-circle-check me-2"></i>@TempData["Success"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
-<!-- Floor Sections -->
-@foreach (var floor in Model)
-{
-    <div class="glass-card p-4 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-            <div>
-                <h4 class="fw-bold text-white mb-1"><i class="fa-solid fa-building text-warning me-2"></i>@floor.Name</h4>
-                <div class="text-secondary small">@floor.Description &bull; @floor.Tables.Count Tables</div>
+<!-- Floor & Status Quick Summary Strip + Search Bar -->
+<div class="glass-card p-3 mb-3 animated-fade-in">
+    <div class="row g-2 align-items-center">
+        <!-- Search Table Input -->
+        <div class="col-lg-3 col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="tableFilterInput" class="form-control border-start-0 ps-0" placeholder="Search table # or seats..." onkeyup="filterTableCards()" />
             </div>
-            <span class="badge bg-secondary px-3 py-2 fs-6">Floor #@floor.DisplayOrder</span>
         </div>
 
-        <div class="row g-4">
+        <!-- Status Filter Buttons Strip -->
+        <div class="col-lg-5 col-md-8">
+            <div class="btn-group btn-group-sm w-100" role="group">
+                <button class="btn btn-outline-secondary status-pill-btn active" onclick="filterByStatus('all', this)">
+                    All (@totalTables)
+                </button>
+                <button class="btn btn-outline-success status-pill-btn" onclick="filterByStatus('available', this)">
+                    Available (@availableCount)
+                </button>
+                <button class="btn btn-outline-warning status-pill-btn" onclick="filterByStatus('occupied', this)">
+                    Occupied (@occupiedCount)
+                </button>
+                <button class="btn btn-outline-primary status-pill-btn" onclick="filterByStatus('reserved', this)">
+                    Reserved (@reservedCount)
+                </button>
+                <button class="btn btn-outline-purple status-pill-btn" onclick="filterByStatus('billing', this)" style="color:#7c3aed; border-color:#ddd6fe;">
+                    Billing (@billingCount)
+                </button>
+            </div>
+        </div>
+
+        <!-- Floor Filter Tabs -->
+        <div class="col-lg-4 col-md-12 text-lg-end">
+            <div class="d-inline-flex gap-1 overflow-auto">
+                <button class="btn btn-sm btn-primary rounded-pill px-3 floor-nav-btn active shadow-sm" onclick="filterFloorTab('all', this)">
+                    All Floors (@Model.Count())
+                </button>
+                @foreach (var floor in Model)
+                {
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 floor-nav-btn shadow-sm" onclick="filterFloorTab(@floor.Id, this)">
+                        @floor.Name (@floor.Tables.Count)
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compact, Space-Efficient Floor Table Layout (Requested: "Table boxes seems too large, what if there are multiple tables") -->
+@foreach (var floor in Model)
+{
+    <div class="glass-card p-3 mb-3 floor-section-card" data-floor-id="@floor.Id">
+        <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-building text-warning"></i>
+                    <span>@floor.Name</span>
+                </h5>
+                <span class="badge bg-light text-secondary border rounded-pill small">@floor.Tables.Count Tables</span>
+            </div>
+            <span class="badge bg-light text-dark border px-2 py-1 rounded-pill small fw-bold">
+                Floor #@floor.DisplayOrder
+            </span>
+        </div>
+
+        <!-- Compact Responsive Grid (col-xxl-2 col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6) -->
+        <div class="row g-2">
             @foreach (var table in floor.Tables)
             {
-                string statusClass = table.Status switch {
-                    TableStatus.Available => "status-available",
-                    TableStatus.Occupied => "status-occupied",
-                    TableStatus.Reserved => "status-reserved",
-                    TableStatus.Billing => "status-billing",
-                    _ => "status-cleaning"
+                string statusKey = table.Status switch {
+                    TableStatus.Available => "available",
+                    TableStatus.Occupied => "occupied",
+                    TableStatus.Reserved => "reserved",
+                    TableStatus.Billing => "billing",
+                    _ => "cleaning"
                 };
 
                 string badgeClass = table.Status switch {
@@ -61,49 +143,83 @@
                     TableStatus.Occupied => "badge-occupied",
                     TableStatus.Reserved => "badge-reserved",
                     TableStatus.Billing => "badge-billing",
-                    _ => "bg-secondary text-white"
+                    _ => "badge-cleaning"
                 };
 
-                <div class="col-xl-3 col-lg-4 col-md-6">
-                    <div class="table-card @statusClass h-100" onclick="window.location.href='/Tables/Details/@table.Id'">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h5 class="fw-bold text-white mb-0">@table.TableNumber</h5>
-                            <span class="status-badge @badgeClass">@table.StatusName</span>
-                        </div>
-                        
-                        <div class="small text-secondary mb-2">
-                            <i class="fa-solid fa-users me-1"></i> Seats: @table.Capacity Guests
+                <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-4 col-sm-6 col-6 table-cell-wrapper" 
+                     data-status="@statusKey" 
+                     data-search="@table.TableNumber.ToLower() @table.Capacity seats @floor.Name.ToLower()">
+                    
+                    <div class="table-card-compact status-@statusKey h-100" onclick="if(!event.target.closest('button, a, form')) { window.location.href='/Tables/Details/@table.Id'; }">
+                        <!-- Top: Number and Status Badge -->
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-1">
+                                <i class="fa-solid fa-chair text-muted small"></i>
+                                <span>@table.TableNumber</span>
+                            </span>
+                            <span class="status-badge @badgeClass" style="font-size: 0.65rem; padding: 2px 8px;">@table.StatusName</span>
                         </div>
 
-                        @if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
-                        {
-                            <div class="bg-dark p-2 rounded border border-secondary mb-2">
-                                <div class="d-flex justify-content-between small text-secondary">
-                                    <span>Waiter:</span>
-                                    <span class="text-light fw-semibold">@(table.WaiterName ?? "Amit")</span>
-                                </div>
-                                <div class="d-flex justify-content-between fw-bold text-warning mt-1 fs-6">
-                                    <span>Current Bill:</span>
-                                    <span>₹@table.CurrentOrderAmount.ToString("N0")</span>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <a href="/Orders/POS?tableId=@table.Id" class="btn btn-sm btn-outline-info w-50 rounded-pill">Add Items</a>
-                                <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-primary w-50 rounded-pill">View Order</a>
-                            </div>
-                        }
-                        else if (table.Status == TableStatus.Available)
-                        {
-                            <div class="text-success small my-3"><i class="fa-solid fa-circle-check me-1"></i> Ready for Guests</div>
-                            <a href="/Orders/POS?tableId=@table.Id" class="btn btn-sm btn-success w-100 rounded-pill">
-                                <i class="fa-solid fa-plus me-1"></i> Create Order
-                            </a>
-                        }
-                        else if (table.Status == TableStatus.Reserved)
-                        {
-                            <div class="text-info small my-3"><i class="fa-solid fa-clock me-1"></i> Reserved for 8:00 PM</div>
-                            <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-outline-info w-100 rounded-pill">Manage Reservation</a>
-                        }
+                        <!-- Mid: Seats and Bill / Guest Info -->
+                        <div class="d-flex justify-content-between align-items-center mb-1 small">
+                            <span class="seat-pill" style="font-size: 0.7rem; padding: 1px 6px;">
+                                <i class="fa-solid fa-users text-muted me-1"></i>@table.Capacity
+                            </span>
+                            @if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
+                            {
+                                <span class="fw-bold text-success" style="font-size: 0.8rem;">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                            }
+                            else if (table.Status == TableStatus.Available)
+                            {
+                                <span class="text-success fw-semibold" style="font-size: 0.725rem;"><i class="fa-solid fa-check me-1"></i>Ready</span>
+                            }
+                            else
+                            {
+                                <span class="text-primary small" style="font-size: 0.725rem;">Reserved</span>
+                            }
+                        </div>
+
+                        <!-- Action Bar (Compact) -->
+                        <div class="d-flex justify-content-between align-items-center pt-1 border-top mt-auto gap-1">
+                            @if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
+                            {
+                                <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Tables" class="btn btn-sm btn-outline-primary px-2 py-0 rounded-pill flex-fill" style="font-size: 0.7rem;" title="Add Items">
+                                    <i class="fa-solid fa-plus"></i> Add
+                                </a>
+                                <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-primary px-2 py-0 rounded-pill flex-fill" style="font-size: 0.7rem;" title="View Order">
+                                    Order
+                                </a>
+                                <!-- Mark Available button is ACTIVE to release -->
+                                <form asp-action="UpdateStatus" method="post" class="d-inline" onsubmit="return confirm('Release table @table.TableNumber?');">
+                                    <input type="hidden" name="tableId" value="@table.Id" />
+                                    <input type="hidden" name="status" value="@TableStatus.Available" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger px-1 py-0 rounded-pill" style="font-size: 0.7rem;" title="Release table and mark available">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </button>
+                                </form>
+                            }
+                            else if (table.Status == TableStatus.Available)
+                            {
+                                <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Tables" class="btn btn-sm btn-success px-2 py-0 rounded-pill flex-fill fw-bold" style="font-size: 0.7rem;">
+                                    <i class="fa-solid fa-plus"></i> Order
+                                </a>
+                                <!-- REQUIREMENT: If table is available, DISABLE mark available button -->
+                                <button type="button" class="btn btn-sm btn-outline-secondary px-2 py-0 rounded-pill flex-fill opacity-75" disabled style="font-size: 0.7rem;" title="Table is already available">
+                                    <i class="fa-solid fa-check"></i> Available
+                                </button>
+                            }
+                            else
+                            {
+                                <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-outline-info px-2 py-0 rounded-pill flex-fill" style="font-size: 0.7rem;">Manage</a>
+                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                    <input type="hidden" name="tableId" value="@table.Id" />
+                                    <input type="hidden" name="status" value="@TableStatus.Available" />
+                                    <button type="submit" class="btn btn-sm btn-outline-success px-1 py-0 rounded-pill" style="font-size: 0.7rem;" title="Mark Available">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                </form>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -114,41 +230,123 @@
 <!-- Transfer Table Modal -->
 <div class="modal fade" id="transferModal" tabindex="-1">
     <div class="modal-dialog">
-        <form asp-action="Transfer" method="post" class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-white"><i class="fa-solid fa-arrow-right-arrow-left me-2"></i>Transfer Table</h5>
+        <form asp-action="Transfer" method="post" class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-arrow-right-arrow-left text-primary me-2"></i>Transfer Table Order</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label text-secondary">Source Table (Occupied)</label>
-                    <select name="sourceTableId" class="form-select bg-dark text-white border-secondary" required>
+                    <label class="form-label text-dark fw-bold small">Source Table (Currently Occupied)</label>
+                    <select name="sourceTableId" class="form-select" required>
                         @foreach (var floor in Model)
                         {
-                            @foreach (var t in floor.Tables.Where(x => x.Status == TableStatus.Occupied))
+                            @foreach (var t in floor.Tables.Where(x => x.Status == TableStatus.Occupied || x.Status == TableStatus.Billing))
                             {
-                                <option value="@t.Id">@t.TableNumber (@floor.Name) - Current: ₹@t.CurrentOrderAmount.ToString("N0")</option>
+                                <option value="@t.Id">@t.TableNumber (@floor.Name) - Current Bill: ₹@t.CurrentOrderAmount.ToString("N0")</option>
                             }
                         }
                     </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label text-secondary">Target Table (Available)</label>
-                    <select name="targetTableId" class="form-select bg-dark text-white border-secondary" required>
+                    <label class="form-label text-dark fw-bold small">Target Table (Must be Available)</label>
+                    <select name="targetTableId" class="form-select" required>
                         @foreach (var floor in Model)
                         {
                             @foreach (var t in floor.Tables.Where(x => x.Status == TableStatus.Available))
                             {
-                                <option value="@t.Id">@t.TableNumber (@floor.Name) - Capacity: @t.Capacity</option>
+                                <option value="@t.Id">@t.TableNumber (@floor.Name) - Seats: @t.Capacity</option>
                             }
                         }
                     </select>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer border-top">
                 <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-primary rounded-pill px-4">Confirm Transfer</button>
             </div>
         </form>
     </div>
 </div>
+
+<!-- Merge Table Modal -->
+<div class="modal fade" id="mergeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form asp-action="Merge" method="post" class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-code-merge text-warning me-2"></i>Merge Table Orders</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-dark fw-bold small">Source Table to Merge From</label>
+                    <select name="sourceTableId" class="form-select" required>
+                        @foreach (var floor in Model)
+                        {
+                            @foreach (var t in floor.Tables.Where(x => x.Status == TableStatus.Occupied))
+                            {
+                                <option value="@t.Id">@t.TableNumber (@floor.Name) - ₹@t.CurrentOrderAmount.ToString("N0")</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-dark fw-bold small">Target Table to Merge Into</label>
+                    <select name="targetTableId" class="form-select" required>
+                        @foreach (var floor in Model)
+                        {
+                            @foreach (var t in floor.Tables.Where(x => x.Status == TableStatus.Occupied))
+                            {
+                                <option value="@t.Id">@t.TableNumber (@floor.Name) - ₹@t.CurrentOrderAmount.ToString("N0")</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">Confirm Merge</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let currentStatusFilter = 'all';
+
+    function filterFloorTab(floorId, btn) {
+        $('.floor-nav-btn').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $(btn).removeClass('btn-outline-secondary').addClass('btn-primary active');
+
+        if (floorId === 'all') {
+            $('.floor-section-card').show();
+        } else {
+            $('.floor-section-card').hide();
+            $(`.floor-section-card[data-floor-id="${floorId}"]`).show();
+        }
+    }
+
+    function filterByStatus(status, btn) {
+        currentStatusFilter = status;
+        $('.status-pill-btn').removeClass('active');
+        $(btn).addClass('active');
+        filterTableCards();
+    }
+
+    function filterTableCards() {
+        let query = $('#tableFilterInput').val().toLowerCase();
+        $('.table-cell-wrapper').each(function() {
+            let matchesStatus = (currentStatusFilter === 'all') || ($(this).data('status') === currentStatusFilter);
+            let searchContent = $(this).data('search') || '';
+            let matchesSearch = !query || searchContent.includes(query);
+
+            if (matchesStatus && matchesSearch) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+</script>
+}

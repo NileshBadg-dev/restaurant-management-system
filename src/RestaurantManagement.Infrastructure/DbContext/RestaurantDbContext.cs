@@ -81,6 +81,12 @@ public class RestaurantDbContext : Microsoft.EntityFrameworkCore.DbContext
             .HasForeignKey(o => o.TableId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<Table>()
+            .HasOne(t => t.CurrentOrder)
+            .WithMany()
+            .HasForeignKey(t => t.CurrentOrderId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<Bill>()
             .HasOne(b => b.Order)
             .WithOne(o => o.Bill)

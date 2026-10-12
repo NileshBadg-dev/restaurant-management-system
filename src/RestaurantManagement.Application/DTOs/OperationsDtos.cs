@@ -91,6 +91,34 @@ public class DashboardSummaryDto
     public List<LowStockDto> LowStockAlerts { get; set; } = new();
     public List<TopSellingItemDto> TopSellingItems { get; set; } = new();
     public List<FloorDto> FloorTables { get; set; } = new();
+    public List<DailySalesSummaryDto> WeeklySalesTrend { get; set; } = new();
+    public int DineInOrdersCount { get; set; }
+    public int TakeawayOrdersCount { get; set; }
+    public int DeliveryOrdersCount { get; set; }
+    public List<RoleStaffCountDto> StaffRoleAttendance { get; set; } = new();
+    public int TotalStaffCount { get; set; }
+    public int PresentStaffCount { get; set; }
+    public List<RecentOrderSummaryDto> RecentOrders { get; set; } = new();
+}
+
+public class RecentOrderSummaryDto
+{
+    public int Id { get; set; }
+    public string OrderNumber { get; set; } = string.Empty;
+    public string OrderType { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public int? TableId { get; set; }
+    public string TableNumber { get; set; } = string.Empty;
+    public decimal GrandTotal { get; set; }
+    public int TotalItems { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class RoleStaffCountDto
+{
+    public string RoleName { get; set; } = string.Empty;
+    public int TotalCount { get; set; }
+    public int PresentCount { get; set; }
 }
 
 public class LowStockDto

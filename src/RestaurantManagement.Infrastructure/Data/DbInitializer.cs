@@ -158,8 +158,16 @@ public static class DbInitializer
         context.KOTs.Add(kot1);
 
         // 9. Seed Employees & Expenses
-        context.Employees.Add(new Employee { Name = "Amit Kumar", Email = "amit@spicegarden.com", Phone = "9876500004", Role = UserRole.Waiter, BaseSalary = 18000m, Shift = "Morning" });
-        context.Employees.Add(new Employee { Name = "Sunita Sharma", Email = "sunita@spicegarden.com", Phone = "9876500005", Role = UserRole.KitchenStaff, BaseSalary = 25000m, Shift = "Morning" });
+        context.Employees.AddRange(
+            new Employee { Name = "Rajesh Verma", Email = "rajesh.manager@giranagarden.com", Phone = "9876500002", Role = UserRole.Manager, BaseSalary = 45000m, Shift = "General", IsActive = true },
+            new Employee { Name = "Chef Sanjeev Kapoor", Email = "cook.head@giranagarden.com", Phone = "9876500010", Role = UserRole.Cook, BaseSalary = 38000m, Shift = "Morning", IsActive = true },
+            new Employee { Name = "Sunita Sharma", Email = "sunita@giranagarden.com", Phone = "9876500005", Role = UserRole.Cook, BaseSalary = 28000m, Shift = "Evening", IsActive = true },
+            new Employee { Name = "Amit Kumar", Email = "amit@giranagarden.com", Phone = "9876500004", Role = UserRole.Waiter, BaseSalary = 18000m, Shift = "Morning", IsActive = true },
+            new Employee { Name = "Ramesh Rathore", Email = "ramesh@giranagarden.com", Phone = "9876500011", Role = UserRole.Waiter, BaseSalary = 18000m, Shift = "Evening", IsActive = true },
+            new Employee { Name = "Suresh Patel", Email = "suresh.cashier@giranagarden.com", Phone = "9876500003", Role = UserRole.Cashier, BaseSalary = 22000m, Shift = "Morning", IsActive = true },
+            new Employee { Name = "Kishore Solanki", Email = "kishore.hk@giranagarden.com", Phone = "9876500012", Role = UserRole.Housekeeping, BaseSalary = 15000m, Shift = "Morning", IsActive = true },
+            new Employee { Name = "Pooja Ben", Email = "pooja.hk@giranagarden.com", Phone = "9876500013", Role = UserRole.Housekeeping, BaseSalary = 15000m, Shift = "Evening", IsActive = true }
+        );
 
         context.Expenses.Add(new Expense { Category = "Electricity", Description = "Monthly electricity bill", Amount = 12500m, ExpenseDate = DateTime.UtcNow.AddDays(-5), RecordedBy = "Admin" });
 

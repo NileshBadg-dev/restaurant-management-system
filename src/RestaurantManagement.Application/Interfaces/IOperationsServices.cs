@@ -13,7 +13,10 @@ public interface IInventoryService
 public interface IStaffService
 {
     Task<IEnumerable<EmployeeDto>> GetEmployeesAsync();
+    Task<EmployeeDto?> GetEmployeeByIdAsync(int id);
     Task<EmployeeDto> CreateEmployeeAsync(EmployeeDto dto);
+    Task<EmployeeDto> UpdateEmployeeAsync(int id, EmployeeDto dto);
+    Task<bool> DeleteEmployeeAsync(int id);
     Task<IEnumerable<AttendanceDto>> GetTodayAttendanceAsync();
     Task<AttendanceDto> RecordAttendanceAsync(int employeeId, string status);
     Task<ExpenseDto> AddExpenseAsync(ExpenseDto dto);

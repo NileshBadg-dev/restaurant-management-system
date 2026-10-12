@@ -428,87 +428,57 @@ p, .text-secondary, .text-muted {
     box-shadow: var(--shadow-lg);
 }
 
-/* Top 5 Metric Cards with Color-Coded Borders & High Contrast Visibility */
-.metric-card-sales {
+/* Top 5 Metric Cards with Color-Coded Borders & Compact 2:1 Aspect Ratio */
+.metric-card-sales, .metric-card-orders, .metric-card-tables, .metric-card-kot, .metric-card-completed {
     background: #ffffff;
-    border: 2px solid #10b981 !important;
-    border-radius: 18px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 8px 12px;
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
     transition: all 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 72px;
 }
-.metric-card-orders {
-    background: #ffffff;
-    border: 2px solid #0284c7 !important;
-    border-radius: 18px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.25s ease;
-}
-.metric-card-tables {
-    background: #ffffff;
-    border: 2px solid #f59e0b !important;
-    border-radius: 18px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.25s ease;
-}
-.metric-card-kot {
-    background: #ffffff;
-    border: 2px solid #ef4444 !important;
-    border-radius: 18px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.25s ease;
-}
-.metric-card-completed {
-    background: #ffffff;
-    border: 2px solid #8b5cf6 !important;
-    border-radius: 18px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.25s ease;
-}
+.metric-card-sales { border: 2px solid #10b981 !important; }
+.metric-card-orders { border: 2px solid #0284c7 !important; }
+.metric-card-tables { border: 2px solid #f59e0b !important; }
+.metric-card-kot { border: 2px solid #ef4444 !important; }
+.metric-card-completed { border: 2px solid #8b5cf6 !important; }
 
 .metric-card-sales:hover, .metric-card-orders:hover, .metric-card-tables:hover, .metric-card-kot:hover, .metric-card-completed:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
 }
 
 .metric-title-label {
-    color: #0f172a !important;
+    color: #475569 !important;
     font-weight: 700 !important;
-    font-size: 0.825rem !important;
-    letter-spacing: 0.5px;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
 }
 
 .metric-desc-text {
-    color: #334155 !important;
+    color: #64748b !important;
     font-weight: 600 !important;
-    font-size: 0.825rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
 }
 
 .metric-icon-box {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
-    margin-bottom: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    font-size: 0.95rem;
+    margin-bottom: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .metric-sales { background: #ecfdf5; color: #059669; border: 1.5px solid #a7f3d0; }
@@ -516,6 +486,45 @@ p, .text-secondary, .text-muted {
 .metric-tables { background: #fffbeb; color: #d97706; border: 1.5px solid #fde68a; }
 .metric-kot { background: #fff1f2; color: #dc2626; border: 1.5px solid #fecdd3; }
 .metric-completed { background: #f5f3ff; color: #7c3aed; border: 1.5px solid #ddd6fe; }
+
+/* Modern Dashboard Table Cards with 2px Prominent Borders matching Top 5 Boxes */
+.table-card-modern {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 12px 14px;
+    position: relative;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 130px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+.table-card-modern:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+}
+.table-card-modern.status-available {
+    border: 2px solid #10b981 !important;
+    background: #ecfdf5 !important;
+}
+.table-card-modern.status-occupied {
+    border: 2px solid #f59e0b !important;
+    background: #fffbeb !important;
+}
+.table-card-modern.status-reserved {
+    border: 2px solid #0284c7 !important;
+    background: #eff6ff !important;
+}
+.table-card-modern.status-billing {
+    border: 2px solid #8b5cf6 !important;
+    background: #f5f3ff !important;
+}
+.table-card-modern.status-cleaning {
+    border: 2px solid #64748b !important;
+    background: #f8fafc !important;
+}
 
 /* Table Cards */
 .table-card {
@@ -642,6 +651,611 @@ p, .text-secondary, .text-muted {
     border-color: var(--accent-emerald);
     box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
 }
+
+/* Breadcrumbs Styling */
+.breadcrumb {
+    margin-bottom: 0.35rem;
+}
+.breadcrumb-item a {
+    color: var(--accent-emerald);
+    transition: color 0.2s ease;
+}
+.breadcrumb-item a:hover {
+    color: #047857;
+    text-decoration: underline !important;
+}
+.breadcrumb-item.active {
+    color: #1e293b;
+    font-weight: 700;
+}
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    font-size: 1.15rem;
+    line-height: 1;
+    vertical-align: middle;
+    color: #94a3b8;
+}
+
+/* Nav Pills Custom Theme */
+.nav-pills .nav-link {
+    background-color: #f8fafc;
+    color: #334155;
+    border: 1.5px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+.nav-pills .nav-link:hover {
+    background-color: #f1f5f9;
+    color: var(--accent-emerald);
+    border-color: #a7f3d0;
+}
+.nav-pills .nav-link.active {
+    background: var(--accent-emerald-gradient);
+    color: #ffffff !important;
+    border-color: #047857;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+/* Button Disabled States with Tooltip Support */
+button:disabled, .btn:disabled {
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+    opacity: 0.65;
+}
+
+/* Unified Consistent Datagrid (No Black Backgrounds) */
+.app-datagrid {
+    background-color: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+}
+.app-datagrid thead tr {
+    background-color: #f8fafc !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+}
+.app-datagrid thead th {
+    color: #334155 !important;
+    font-weight: 700 !important;
+    font-size: 0.775rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    padding: 12px 16px !important;
+    border: none !important;
+    background-color: #f8fafc !important;
+}
+.app-datagrid tbody tr {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    transition: background-color 0.15s ease !important;
+}
+.app-datagrid tbody tr:hover {
+    background-color: #f1f5f9 !important;
+}
+.app-datagrid tbody td {
+    padding: 12px 16px !important;
+    color: #0f172a !important;
+    vertical-align: middle !important;
+    border: none !important;
+}
+
+/* Compact, Space-Efficient Table Boxes */
+.table-card-compact {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 95px;
+    box-shadow: var(--shadow-sm);
+}
+.table-card-compact:hover {
+    border-color: var(--accent-emerald) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+.table-card-compact.status-available {
+    border-color: #10b981;
+    background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 65%);
+}
+.table-card-compact.status-occupied {
+    border-color: #f59e0b;
+    background: linear-gradient(180deg, #fffbeb 0%, #ffffff 65%);
+}
+.table-card-compact.status-reserved {
+    border-color: #3b82f6;
+    background: linear-gradient(180deg, #eff6ff 0%, #ffffff 65%);
+}
+.table-card-compact.status-billing {
+    border-color: #8b5cf6;
+    background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 65%);
+}
+.table-card-compact.status-cleaning {
+    border-color: #64748b;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 65%);
+}
+
+/* Sleek Horizontal Tab Navigation for Masters */
+.masters-nav-tabs {
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 4px 6px 0 6px;
+    background: #ffffff;
+    border-radius: 14px 14px 0 0;
+}
+.masters-nav-tab-btn {
+    padding: 11px 18px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: #475569;
+    border: none;
+    background: transparent;
+    border-bottom: 3px solid transparent;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.masters-nav-tab-btn:hover {
+    color: #059669;
+    background: #f8fafc;
+}
+.masters-nav-tab-btn.active {
+    color: #059669;
+    border-bottom-color: #059669;
+    background: #ecfdf5;
+}
+
+/* POS Cart Focus and List View */
+.pos-cart-panel-focused {
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12) !important;
+}
+.pos-list-item {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.15s ease;
+}
+.pos-list-item:hover {
+    border-color: #a7f3d0;
+    background: #f0fdf4;
+}
+
+/* Quick Actions Grid */
+.quick-action-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: #1e293b;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    height: 100%;
+}
+.quick-action-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+.quick-action-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+.quick-action-title {
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+.quick-action-sub {
+    font-size: 0.72rem;
+    color: #64748b;
+    line-height: 1;
+}
+
+/* Recent Orders Widget in Dashboard */
+.recent-order-item {
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 9px 12px;
+    transition: all 0.15s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.recent-order-item:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+/* ==================== EXACT DASHBOARD MATCH: BORDERS, BOLD FONTS & ANIMATIONS ==================== */
+@keyframes sectionSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.anim-section {
+    animation: sectionSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.anim-delay-1 { animation-delay: 0.04s; }
+.anim-delay-2 { animation-delay: 0.10s; }
+.anim-delay-3 { animation-delay: 0.16s; }
+.anim-delay-4 { animation-delay: 0.22s; }
+.anim-delay-5 { animation-delay: 0.28s; }
+
+/* Dashboard Section Widgets: Crisp 1.5px Border & Hover Micro-Animation */
+.dashboard-widget-card {
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+.dashboard-widget-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.09) !important;
+    border-color: #94a3b8 !important;
+}
+
+/* Top 5 Metric Cards: 2px Prominent Borders, Bold Fonts & Hover Lift */
+.metric-card-clean {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    min-height: 88px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.metric-card-clean:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Top 5 Distinct Border Colors */
+.metric-card-sales-border {
+    border: 2px solid #10b981 !important;
+}
+.metric-card-sales-border:hover {
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2) !important;
+}
+
+.metric-card-orders-border {
+    border: 2px solid #0284c7 !important;
+}
+.metric-card-orders-border:hover {
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.2) !important;
+}
+
+.metric-card-tables-border {
+    border: 2px solid #f59e0b !important;
+}
+.metric-card-tables-border:hover {
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.2) !important;
+}
+
+.metric-card-kot-border {
+    border: 2px solid #ef4444 !important;
+}
+.metric-card-kot-border:hover {
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2) !important;
+}
+
+.metric-card-completed-border {
+    border: 2px solid #8b5cf6 !important;
+}
+.metric-card-completed-border:hover {
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Bold Typography for Top 5 Boxes */
+.metric-label-bold {
+    font-size: 0.775rem !important;
+    font-weight: 800 !important;
+    color: #1e293b !important;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.metric-value-bold {
+    font-size: 1.85rem !important;
+    font-weight: 900 !important;
+    color: #0f172a !important;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+.metric-desc-bold {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    white-space: nowrap;
+}
+
+/* Dining Table Boxes: 2px Prominent Borders & Hover Animation */
+.table-tile-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 14px 15px;
+    position: relative;
+    user-select: none;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 135px;
+    border-width: 2px !important;
+    border-style: solid !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.table-tile-card.status-available {
+    border-color: #10b981 !important;
+    background: #ffffff;
+}
+.table-tile-card.status-occupied {
+    border-color: #f59e0b !important;
+    background: #ffffff;
+}
+.table-tile-card.status-reserved {
+    border-color: #6366f1 !important;
+    background: #ffffff;
+}
+.table-tile-card.status-billing {
+    border-color: #8b5cf6 !important;
+    background: #ffffff;
+}
+.table-tile-card.status-cleaning {
+    border-color: #64748b !important;
+    background: #ffffff;
+}
+
+.table-tile-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* Status Pill Badges in Table Boxes */
+.status-pill-available {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    font-size: 0.675rem !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #86efac !important;
+    border-radius: 20px !important;
+    padding: 3px 8px !important;
+}
+.status-pill-occupied {
+    background: #fef3c7 !important;
+    color: #b45309 !important;
+    font-size: 0.675rem !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #fde68a !important;
+    border-radius: 20px !important;
+    padding: 3px 8px !important;
+}
+.status-pill-reserved {
+    background: #e0e7ff !important;
+    color: #3730a3 !important;
+    font-size: 0.675rem !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #a5b4fc !important;
+    border-radius: 20px !important;
+    padding: 3px 8px !important;
+}
+.status-pill-billing {
+    background: #ede9fe !important;
+    color: #6d28d9 !important;
+    font-size: 0.675rem !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #c4b5fd !important;
+    border-radius: 20px !important;
+    padding: 3px 8px !important;
+}
+.status-pill-cleaning {
+    background: #f1f5f9 !important;
+    color: #334155 !important;
+    font-size: 0.675rem !important;
+    font-weight: 800 !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 20px !important;
+    padding: 3px 8px !important;
+}
+
+.floor-pill {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    font-size: 0.675rem !important;
+    font-weight: 700 !important;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 20px !important;
+    padding: 2px 8px !important;
+}
+
+/* ==================== CORNER RADIUS BUTTONS WITH COLORS IN TABLE BOXES ==================== */
+.btn-add-order {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 24px !important;
+    font-weight: 800 !important;
+    font-size: 0.8rem !important;
+    padding: 6px 14px !important;
+    box-shadow: 0 3px 10px rgba(5, 150, 105, 0.35) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-add-order:hover {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.5) !important;
+    color: #ffffff !important;
+}
+
+.btn-table-items {
+    background: #fffbeb !important;
+    color: #b45309 !important;
+    border: 1.5px solid #f59e0b !important;
+    border-radius: 20px !important;
+    font-weight: 800 !important;
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-table-items:hover {
+    background: #fef3c7 !important;
+    color: #78350f !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25) !important;
+}
+
+.btn-table-view {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border: 1.5px solid #3b82f6 !important;
+    border-radius: 20px !important;
+    font-weight: 800 !important;
+    font-size: 0.75rem !important;
+    padding: 4px 10px !important;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-table-view:hover {
+    background: #dbeafe !important;
+    color: #1e3a8a !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25) !important;
+}
+
+.btn-table-bill {
+    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 20px !important;
+    font-weight: 800 !important;
+    font-size: 0.75rem !important;
+    padding: 4px 12px !important;
+    box-shadow: 0 3px 10px rgba(194, 65, 12, 0.35) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-table-bill:hover {
+    background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(194, 65, 12, 0.5) !important;
+    color: #ffffff !important;
+}
+
+.btn-table-reserved {
+    background: #eef2ff !important;
+    color: #4338ca !important;
+    border: 1.5px solid #6366f1 !important;
+    border-radius: 20px !important;
+    font-weight: 800 !important;
+    font-size: 0.78rem !important;
+    padding: 5px 14px !important;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.18) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.btn-table-reserved:hover {
+    background: #e0e7ff !important;
+    color: #312e81 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Recent Orders Table with Distinct 1.5px Borders */
+.dashboard-orders-table {
+    border-collapse: collapse;
+}
+.dashboard-orders-table th {
+    font-size: 0.775rem !important;
+    text-transform: uppercase;
+    color: #334155 !important;
+    font-weight: 800 !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    padding: 11px 10px !important;
+    background: #f8fafc !important;
+}
+.dashboard-orders-table td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding: 11px 10px !important;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+.dashboard-orders-table tbody tr:hover td {
+    background: #f8fafc !important;
+}
+
+/* Quick Action Buttons with Corner Radius, Colors and Hover Animation */
+.quick-action-btn-styled {
+    border-radius: 14px !important;
+    font-weight: 800 !important;
+    font-size: 0.875rem !important;
+    padding: 11px 16px !important;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: none !important;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08) !important;
+}
+.quick-action-btn-styled:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18) !important;
+}
+
+
+/* Sidebar Collapsed Pastel Pill Nav Links Matching Screenshot */
+.sidebar-collapsed .sidebar-nav .nav-link {
+    margin: 6px 12px;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(1) { background-color: #00796b !important; border-color: #00796b !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(1) .nav-icon { color: #ffffff !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(2) { background-color: #dcfce7 !important; border-color: #dcfce7 !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(3) { background-color: #fef3c7 !important; border-color: #fef3c7 !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(4) { background-color: #e0f2fe !important; border-color: #e0f2fe !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(5) { background-color: #f3e8ff !important; border-color: #f3e8ff !important; }
+.sidebar-collapsed .sidebar-nav .nav-link:nth-child(6) { background-color: #fee2e2 !important; border-color: #fee2e2 !important; }
+
 
 /* Responsive Overrides */
 @media (max-width: 991.98px) {

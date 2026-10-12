@@ -3,139 +3,278 @@
     var categories = ViewBag.Categories as IEnumerable<CategoryDto> ?? new List<CategoryDto>();
     var menuItems = ViewBag.MenuItems as IEnumerable<MenuItemDto> ?? new List<MenuItemDto>();
     var tables = ViewBag.Tables as IEnumerable<TableDto> ?? new List<TableDto>();
+    var waiters = ViewBag.Waiters as IEnumerable<EmployeeDto> ?? new List<EmployeeDto>();
     var selectedTable = ViewBag.SelectedTable as TableDto;
     int? selectedTableId = ViewBag.SelectedTableId as int?;
+    string returnUrl = (ViewBag.ReturnUrl as string) ?? "/Dashboard";
+    string returnTitle = returnUrl.Contains("Table", StringComparison.OrdinalIgnoreCase) ? "Tables & Floor" : "Dashboard";
+    
+    // Default waiter from selected table or first waiter in staff list
+    string defaultWaiterName = selectedTable?.WaiterName ?? waiters.FirstOrDefault()?.Name ?? "Amit Kumar";
+    int defaultWaiterId = selectedTable?.WaiterId ?? waiters.FirstOrDefault()?.Id ?? 0;
 }
 
-<div class="row g-0">
-    <!-- Left 8 Columns: Category Filter & Menu Items Grid -->
-    <div class="col-lg-8 pe-lg-3">
-        <!-- Order Header Configuration -->
-        <div class="glass-card p-3 mb-3">
-            <div class="row g-3 align-items-center">
+<!-- Breadcrumb & Top Bar (Description removed) -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 animated-fade-in">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 fs-6">
+                <li class="breadcrumb-item">
+                    <a href="@returnUrl" class="text-decoration-none fw-semibold text-success" data-bs-toggle="tooltip" title="Return to @returnTitle">
+                        <i class="fa-solid @(returnTitle == "Dashboard" ? "fa-chart-pie" : "fa-chair") me-1"></i> @returnTitle
+                    </a>
+                </li>
+                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
+                    <i class="fa-solid fa-cash-register text-primary me-1"></i> Create Order (POS)
+                </li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-cash-register text-primary me-2" data-bs-toggle="tooltip" title="Point of Sale Order Creation"></i>Point of Sale (POS) Order
+        </h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Orders/POS" class="btn btn-outline-success rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Create a new dish in Menu items and return here">
+            <i class="fa-solid fa-plus-circle me-1"></i> Add Menu Item
+        </a>
+        <a href="@returnUrl" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to @returnTitle">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to @returnTitle
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Left Column (8 cols): Order Context, Menu Filters, and Menu Items List -->
+    <div class="col-lg-8">
+        
+        <!-- Order Configuration Card -->
+        <div class="glass-card p-3 mb-3 animated-fade-in">
+            <div class="row g-2 align-items-center">
+                <!-- Order Type Segmented Toggle -->
                 <div class="col-md-3">
-                    <label class="form-label text-secondary small mb-1 fw-bold">Order Type</label>
-                    <select id="orderType" class="form-select bg-dark text-white border-secondary">
-                        <option value="1" selected>Dine-in</option>
-                        <option value="2">Takeaway</option>
-                        <option value="3">Delivery</option>
-                    </select>
+                    <label class="form-label text-dark fw-bold small mb-1">
+                        <i class="fa-solid fa-bell-concierge text-primary me-1"></i>Order Type
+                    </label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeDineIn" value="1" checked onchange="onOrderTypeChange()">
+                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeDineIn">Dine-in</label>
+
+                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeTakeaway" value="2" onchange="onOrderTypeChange()">
+                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeTakeaway">Takeaway</label>
+
+                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeDelivery" value="3" onchange="onOrderTypeChange()">
+                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeDelivery">Delivery</label>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label text-secondary small mb-1 fw-bold">Assigned Table</label>
-                    <select id="tableSelect" class="form-select bg-dark text-white border-secondary">
+
+                <!-- Table Selector -->
+                <div class="col-md-3" id="tableSelectWrapper">
+                    <label class="form-label text-dark fw-bold small mb-1">
+                        <i class="fa-solid fa-chair text-warning me-1"></i>Assigned Table
+                    </label>
+                    <select id="tableSelect" class="form-select form-select-sm">
                         <option value="">Select Table...</option>
                         @foreach (var t in tables)
                         {
                             bool isSel = selectedTableId.HasValue && selectedTableId.Value == t.Id;
-                            <option value="@t.Id" selected="@isSel">@t.TableNumber (@t.FloorName) - @t.StatusName</option>
+                            <option value="@t.Id" selected="@isSel">
+                                @t.TableNumber (@t.FloorName) - @t.StatusName
+                            </option>
                         }
                     </select>
                 </div>
+
+                <!-- Searchable Assign Waiter Field -->
                 <div class="col-md-3">
-                    <label class="form-label text-secondary small mb-1 fw-bold">Customer Name</label>
-                    <input type="text" id="customerName" class="form-control bg-dark text-white border-secondary" placeholder="e.g. Rahul Sharma" value="Rahul Sharma" />
+                    <label class="form-label text-dark fw-bold small mb-1">
+                        <i class="fa-solid fa-user-tie text-info me-1"></i>Assign Waiter
+                    </label>
+                    <div class="position-relative">
+                        <input type="text" id="waiterInput" list="waiterDataList" class="form-control form-control-sm" placeholder="Search or select waiter..." value="@defaultWaiterName" onchange="onWaiterChange()" />
+                        <datalist id="waiterDataList">
+                            @foreach (var w in waiters)
+                            {
+                                <option value="@w.Name" data-id="@w.Id">@w.Name (@w.Shift)</option>
+                            }
+                        </datalist>
+                        <input type="hidden" id="selectedWaiterId" value="@defaultWaiterId" />
+                    </div>
                 </div>
+
+                <!-- Customer Name & Phone -->
                 <div class="col-md-3">
-                    <label class="form-label text-secondary small mb-1 fw-bold">Customer Phone</label>
-                    <input type="text" id="customerPhone" class="form-control bg-dark text-white border-secondary" placeholder="9876543210" value="9876543210" />
+                    <label class="form-label text-dark fw-bold small mb-1">
+                        <i class="fa-solid fa-user text-success me-1"></i>Customer
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="customerName" class="form-control form-control-sm" placeholder="Name" value="Rahul Sharma" />
+                        <input type="tel" id="customerPhone" class="form-control form-control-sm" placeholder="Phone" value="9876543210" />
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Category Filter Pills & Search -->
-        <div class="glass-card p-3 mb-3">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div class="input-group w-50">
-                    <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
-                    <input type="text" id="menuSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search menu item..." onkeyup="filterMenu()" />
+        <!-- Filter & Search Toolbar + Quick Add Item Link -->
+        <div class="glass-card p-3 mb-3 animated-fade-in">
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-7">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+                        <input type="text" id="menuSearch" class="form-control border-start-0 ps-0" placeholder="Search dish by name or ingredients..." onkeyup="filterMenu()" />
+                        <button class="btn btn-outline-secondary" type="button" onclick="$('#menuSearch').val(''); filterMenu();" title="Clear">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-outline-success btn-sm active" onclick="filterVeg('all')">All</button>
-                    <button class="btn btn-outline-success btn-sm" onclick="filterVeg('veg')"><span class="veg-indicator me-1"></span> Veg</button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="filterVeg('nonveg')"><span class="nonveg-indicator me-1"></span> Non-Veg</button>
+
+                <div class="col-md-5 text-md-end d-flex gap-2 justify-content-end">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-secondary btn-sm active veg-filter-btn px-2" onclick="filterVeg('all', this)">All</button>
+                        <button class="btn btn-outline-success btn-sm veg-filter-btn px-2" onclick="filterVeg('veg', this)">
+                            <span class="d-inline-block rounded-1 me-1" style="width:8px; height:8px; background:#10b981;"></span> Veg
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm veg-filter-btn px-2" onclick="filterVeg('nonveg', this)">
+                            <span class="d-inline-block rounded-1 me-1" style="width:8px; height:8px; background:#ef4444;"></span> Non-Veg
+                        </button>
+                    </div>
+
+                    <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Orders/POS" class="btn btn-sm btn-outline-success rounded-pill px-3" data-bs-toggle="tooltip" title="Add new item to menu catalog">
+                        <i class="fa-solid fa-plus me-1"></i> Add Item
+                    </a>
                 </div>
             </div>
 
-            <!-- Categories Bar -->
-            <div class="d-flex gap-2 overflow-auto pb-2" style="white-space: nowrap;">
-                <button class="btn btn-primary rounded-pill px-3 cat-btn active" onclick="filterCategory(0, this)">All Items</button>
+            <!-- Categories Horizontal Filter Pills -->
+            <div class="d-flex gap-2 overflow-auto pb-1" style="white-space: nowrap;">
+                <button class="btn btn-sm btn-primary rounded-pill px-3 cat-btn active shadow-sm" onclick="filterCategory(0, this)">
+                    All (@menuItems.Count())
+                </button>
                 @foreach (var cat in categories)
                 {
-                    <button class="btn btn-outline-light rounded-pill px-3 cat-btn" onclick="filterCategory(@cat.Id, this)">@cat.Name</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 cat-btn shadow-sm" onclick="filterCategory(@cat.Id, this)">
+                        @cat.Name (@cat.ItemCount)
+                    </button>
                 }
             </div>
         </div>
 
-        <!-- Menu Items Cards Grid -->
-        <div class="row g-3" id="menuGrid" style="max-height: 60vh; overflow-y: auto;">
-            @foreach (var item in menuItems)
-            {
-                <div class="col-md-4 col-sm-6 menu-card-item" data-cat="@item.CategoryId" data-veg="@(item.IsVeg ? "veg" : "nonveg")" data-name="@item.Name.ToLower()">
-                    <div class="pos-menu-item p-3 h-100 d-flex flex-column justify-content-between">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="@(item.IsVeg ? "veg-indicator" : "nonveg-indicator") me-2" title="@(item.IsVeg ? "Vegetarian" : "Non-Vegetarian")"></span>
-                                <span class="badge bg-secondary">@item.CategoryName</span>
+        <!-- Menu Items in LIST Format (Requested: "Items show in list") -->
+        <div class="glass-card p-2 animated-fade-in" style="max-height: 58vh; overflow-y: auto;">
+            <div class="list-group list-group-flush" id="menuItemList">
+                @foreach (var item in menuItems)
+                {
+                    <div class="list-group-item list-group-item-action p-2 border-bottom menu-list-row d-flex align-items-center justify-content-between"
+                         data-cat="@item.CategoryId" data-veg="@(item.IsVeg ? "veg" : "nonveg")" data-name="@item.Name.ToLower()" style="border-radius: 8px;">
+                        
+                        <!-- Left Info: Veg icon, Name, Category, Prep time -->
+                        <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 0;">
+                            <!-- Veg/Non-veg indicator -->
+                            <span class="badge @(item.IsVeg ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle") rounded-1 px-1 py-1" 
+                                  title="@(item.IsVeg ? "Vegetarian" : "Non-Vegetarian")">
+                                <i class="fa-solid @(item.IsVeg ? "fa-leaf" : "fa-drumstick-bite")" style="font-size: 0.75rem;"></i>
+                            </span>
+
+                            <div style="min-width: 0;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold text-dark fs-6 text-truncate">@item.Name</span>
+                                    <span class="badge bg-light text-secondary border small rounded-pill">@item.CategoryName</span>
+                                    @if (!item.IsAvailable)
+                                    {
+                                        <span class="badge bg-danger rounded-pill small">Sold Out</span>
+                                    }
+                                </div>
+                                <div class="small metric-desc-text text-truncate" style="max-width: 420px;">@item.Description</div>
                             </div>
-                            <h6 class="fw-bold text-white mb-1">@item.Name</h6>
-                            <p class="text-secondary small mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">@item.Description</p>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary">
-                            <span class="fs-5 fw-bold text-warning">₹@item.Price.ToString("N0")</span>
-                            <button class="btn btn-primary btn-sm rounded-pill px-3" onclick="addToCart(@item.Id, '@item.Name', @item.Price)">
-                                <i class="fa-solid fa-plus me-1"></i> Add
-                            </button>
+
+                        <!-- Right Info: Price, Prep time, and Add button -->
+                        <div class="d-flex align-items-center gap-3 ms-2">
+                            <div class="text-end">
+                                <span class="fw-bold text-success fs-5">₹@item.Price.ToString("N0")</span>
+                                <div class="text-muted small" style="font-size: 0.725rem;"><i class="fa-regular fa-clock me-1"></i>@item.PreparationTimeMinutes m</div>
+                            </div>
+
+                            @if (item.IsAvailable)
+                            {
+                                <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm d-flex align-items-center gap-1" onclick="addToCart(@item.Id, '@item.Name', @item.Price)">
+                                    <i class="fa-solid fa-plus"></i> Add
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn btn-outline-secondary btn-sm rounded-pill px-2" disabled>Unavailable</button>
+                            }
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
         </div>
     </div>
 
-    <!-- Right 4 Columns: Live Order Cart Sidebar -->
-    <div class="col-lg-4 mt-4 mt-lg-0">
-        <div class="glass-card p-4 pos-cart-panel d-flex flex-column justify-content-between">
+    <!-- Right Column (4 cols): Attractive, Highly-Focused Cart Panel (Requested: "make current order cart section attractive and easily focused") -->
+    <div class="col-lg-4">
+        <div class="glass-card p-3 h-100 d-flex flex-column justify-content-between shadow-lg pos-cart-panel-focused" style="border-radius: 18px;">
             <div>
-                <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-3 mb-3">
-                    <h5 class="fw-bold mb-0 text-white"><i class="fa-solid fa-shopping-cart text-warning me-2"></i>Current Cart</h5>
-                    <span class="badge bg-primary fs-6" id="cartCount">0 Items</span>
+                <!-- Distinct Cart Header -->
+                <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 34px; height: 34px;">
+                            <i class="fa-solid fa-cart-shopping fs-6"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">Current Cart</h5>
+                            <span class="small text-muted" id="orderTargetDesc">Dine-in Order</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold fs-6" id="cartCount">0 Items</span>
+                        <button class="btn btn-outline-danger btn-sm rounded-pill px-2" onclick="clearCart()" title="Clear order cart">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Items Cart List -->
-                <div id="cartItemsList" style="max-height: 40vh; overflow-y: auto;" class="pe-1 mb-3">
-                    <div class="text-center text-secondary py-5" id="emptyCartMsg">
-                        <i class="fa-solid fa-basket-shopping fs-1 mb-2"></i>
-                        <p class="small">Cart is empty. Select items from the menu to build order.</p>
+                <div id="cartItemsList" style="max-height: 38vh; overflow-y: auto;" class="pe-1 mb-2">
+                    <div class="text-center text-muted py-5" id="emptyCartMsg">
+                        <i class="fa-solid fa-basket-shopping fs-1 mb-2 text-success opacity-50"></i>
+                        <p class="small mb-0 fw-semibold text-dark">Your cart is empty.</p>
+                        <span class="small text-muted">Click "+ Add" on any menu item from the list to add to order.</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Total Calculation & Submit -->
-            <div class="border-top border-secondary pt-3">
+            <!-- Focused Billing & Submit Section -->
+            <div class="border-top pt-2">
                 <div class="mb-2">
-                    <input type="text" id="specialNotes" class="form-control bg-dark text-white border-secondary form-control-sm" placeholder="Special Instructions (e.g. Less spicy, Extra napkin)..." />
+                    <input type="text" id="specialNotes" class="form-control form-control-sm" placeholder="Kitchen Notes (e.g. Less spicy, Extra napkins)..." />
                 </div>
                 
-                <div class="d-flex justify-content-between text-secondary mb-1 small">
-                    <span>Subtotal:</span>
-                    <span class="fw-bold text-white" id="subtotalAmount">₹0.00</span>
-                </div>
-                <div class="d-flex justify-content-between text-secondary mb-1 small">
-                    <span>CGST (2.5%):</span>
-                    <span class="fw-bold text-white" id="cgstAmount">₹0.00</span>
-                </div>
-                <div class="d-flex justify-content-between text-secondary mb-1 small">
-                    <span>SGST (2.5%):</span>
-                    <span class="fw-bold text-white" id="sgstAmount">₹0.00</span>
-                </div>
-                <div class="d-flex justify-content-between fs-4 fw-bold text-warning border-top border-secondary pt-2 mb-3">
-                    <span>Total Pay:</span>
-                    <span id="grandTotalAmount">₹0.00</span>
+                <div class="bg-light p-2 rounded-3 mb-2 border">
+                    <div class="d-flex justify-content-between text-secondary mb-1 small">
+                        <span>Items Subtotal:</span>
+                        <span class="fw-bold text-dark" id="subtotalAmount">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-secondary mb-1 small">
+                        <span>CGST (2.5%):</span>
+                        <span class="fw-bold text-dark" id="cgstAmount">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-secondary mb-1 small">
+                        <span>SGST (2.5%):</span>
+                        <span class="fw-bold text-dark" id="sgstAmount">₹0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between fs-4 fw-bold text-dark border-top pt-1 mt-1">
+                        <span>Total Payable:</span>
+                        <span class="text-success" id="grandTotalAmount">₹0.00</span>
+                    </div>
                 </div>
 
-                <button class="btn btn-warning w-100 py-3 rounded-pill fw-bold text-dark fs-5 shadow" onclick="submitPOSOrder()">
-                    <i class="fa-solid fa-fire me-2"></i> Confirm & Send KOT
+                <!-- High-Focus CTA Button -->
+                <button class="btn btn-warning w-100 py-3 rounded-pill fw-bold text-dark fs-5 shadow-sm d-flex align-items-center justify-content-center gap-2" id="submitOrderBtn" onclick="submitPOSOrder()">
+                    <i class="fa-solid fa-fire text-danger"></i>
+                    <span>Confirm Order & Send KOT</span>
                 </button>
             </div>
         </div>
@@ -145,6 +284,31 @@
 @section Scripts {
 <script>
     let cart = [];
+
+    // Sync Waiter Selection
+    function onWaiterChange() {
+        let val = $('#waiterInput').val();
+        let opt = $(`#waiterDataList option[value="${val}"]`);
+        if (opt.length) {
+            $('#selectedWaiterId').val(opt.data('id'));
+        }
+    }
+
+    function onOrderTypeChange() {
+        let orderType = $('input[name="orderTypeRadio"]:checked').val();
+        let targetText = "Dine-in Order";
+        if (orderType === "2") {
+            targetText = "Takeaway Order";
+            $('#tableSelectWrapper').hide();
+        } else if (orderType === "3") {
+            targetText = "Delivery Order";
+            $('#tableSelectWrapper').hide();
+        } else {
+            targetText = "Dine-in Order";
+            $('#tableSelectWrapper').show();
+        }
+        $('#orderTargetDesc').text(targetText);
+    }
 
     function addToCart(id, name, price) {
         let existing = cart.find(i => i.id === id);
@@ -167,10 +331,23 @@
         renderCart();
     }
 
+    function clearCart() {
+        if (cart.length > 0 && confirm("Clear current order cart?")) {
+            cart = [];
+            renderCart();
+        }
+    }
+
     function renderCart() {
         let container = $('#cartItemsList');
         if (cart.length === 0) {
-            container.html(`<div class="text-center text-secondary py-5"><i class="fa-solid fa-basket-shopping fs-1 mb-2"></i><p class="small">Cart is empty.</p></div>`);
+            container.html(`
+                <div class="text-center text-muted py-5" id="emptyCartMsg">
+                    <i class="fa-solid fa-basket-shopping fs-1 mb-2 text-success opacity-50"></i>
+                    <p class="small mb-0 fw-semibold text-dark">Your cart is empty.</p>
+                    <span class="small text-muted">Click "+ Add" on any menu item from the list to add to order.</span>
+                </div>
+            `);
             $('#cartCount').text('0 Items');
             $('#subtotalAmount').text('₹0.00');
             $('#cgstAmount').text('₹0.00');
@@ -189,15 +366,22 @@
             totalQty += item.qty;
 
             html += `
-                <div class="p-2 mb-2 bg-dark rounded border border-secondary d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="fw-bold text-white small">${item.name}</div>
-                        <div class="text-warning small">₹${item.price} x ${item.qty} = ₹${itemTotal}</div>
+                <div class="p-2 mb-2 bg-white rounded-3 border d-flex justify-content-between align-items-center shadow-sm">
+                    <div style="flex: 1; min-width: 0;">
+                        <div class="fw-bold text-dark small text-truncate">${item.name}</div>
+                        <div class="text-muted small">₹${item.price} &times; ${item.qty} = <strong class="text-success">₹${itemTotal}</strong></div>
                     </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <button class="btn btn-outline-danger btn-sm px-2 py-0" onclick="updateQty(${item.id}, -1)">-</button>
-                        <span class="fw-bold text-white px-2">${item.qty}</span>
-                        <button class="btn btn-outline-success btn-sm px-2 py-0" onclick="updateQty(${item.id}, 1)">+</button>
+                    <div class="d-flex align-items-center gap-1 ms-2">
+                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateQty(${item.id}, -1)">
+                            <i class="fa-solid fa-minus" style="font-size: 0.65rem;"></i>
+                        </button>
+                        <span class="fw-bold text-dark px-2">${item.qty}</span>
+                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateQty(${item.id}, 1)">
+                            <i class="fa-solid fa-plus" style="font-size: 0.65rem;"></i>
+                        </button>
+                        <button class="btn btn-link text-danger p-0 ms-1" onclick="updateQty(${item.id}, -${item.qty})" title="Remove">
+                            <i class="fa-solid fa-trash-can small"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -208,7 +392,7 @@
 
         let cgst = subtotal * 0.025;
         let sgst = subtotal * 0.025;
-        let total = subtotal + cgst + sgst;
+        let total = Math.round(subtotal + cgst + sgst);
 
         $('#subtotalAmount').text('₹' + subtotal.toFixed(2));
         $('#cgstAmount').text('₹' + cgst.toFixed(2));
@@ -217,28 +401,31 @@
     }
 
     function filterCategory(catId, btn) {
-        $('.cat-btn').removeClass('btn-primary active').addClass('btn-outline-light');
-        $(btn).removeClass('btn-outline-light').addClass('btn-primary active');
+        $('.cat-btn').removeClass('btn-primary active').addClass('btn-outline-secondary');
+        $(btn).removeClass('btn-outline-secondary').addClass('btn-primary active');
 
         if (catId === 0) {
-            $('.menu-card-item').show();
+            $('.menu-list-row').show();
         } else {
-            $('.menu-card-item').hide();
-            $(`.menu-card-item[data-cat="${catId}"]`).show();
+            $('.menu-list-row').hide();
+            $(`.menu-list-row[data-cat="${catId}"]`).show();
         }
     }
 
-    function filterVeg(type) {
-        if (type === 'all') $('.menu-card-item').show();
+    function filterVeg(type, btn) {
+        $('.veg-filter-btn').removeClass('active');
+        $(btn).addClass('active');
+
+        if (type === 'all') $('.menu-list-row').show();
         else {
-            $('.menu-card-item').hide();
-            $(`.menu-card-item[data-veg="${type}"]`).show();
+            $('.menu-list-row').hide();
+            $(`.menu-list-row[data-veg="${type}"]`).show();
         }
     }
 
     function filterMenu() {
         let query = $('#menuSearch').val().toLowerCase();
-        $('.menu-card-item').each(function() {
+        $('.menu-list-row').each(function() {
             let name = $(this).data('name');
             if (name.includes(query)) $(this).show();
             else $(this).hide();
@@ -247,24 +434,30 @@
 
     function submitPOSOrder() {
         if (cart.length === 0) {
-            alert("Cart is empty! Please add items to create order.");
+            alert("Cart is empty! Please click '+ Add' on items to create an order.");
             return;
         }
 
+        let orderType = parseInt($('input[name="orderTypeRadio"]:checked').val());
         let tableId = $('#tableSelect').val();
-        let orderType = parseInt($('#orderType').val());
         
         if (orderType === 1 && !tableId) {
-            alert("Please select an assigned table for Dine-in order.");
+            alert("Please select an assigned dining table for Dine-in orders.");
+            $('#tableSelect').focus();
             return;
         }
+
+        let waiterId = parseInt($('#selectedWaiterId').val()) || null;
+        let submitBtn = $('#submitOrderBtn');
+        submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Sending KOT...');
 
         let dto = {
             orderType: orderType,
-            tableId: tableId ? parseInt(tableId) : null,
-            customerName: $('#customerName').val(),
-            customerPhone: $('#customerPhone').val(),
-            specialInstructions: $('#specialNotes').val(),
+            tableId: (orderType === 1 && tableId) ? parseInt(tableId) : null,
+            waiterId: waiterId,
+            customerName: $('#customerName').val() || "Guest",
+            customerPhone: $('#customerPhone').val() || "",
+            specialInstructions: $('#specialNotes').val() || "",
             items: cart.map(i => ({ menuItemId: i.id, quantity: i.qty, specialInstructions: i.notes || "" }))
         };
 
@@ -275,13 +468,23 @@
             data: JSON.stringify(dto),
             success: function(res) {
                 if (res.success) {
-                    alert('Order #' + res.orderNumber + ' Created & KOT Generated Successfully!');
+                    alert('Order #' + res.orderNumber + ' Created! KOT dispatched to Kitchen.');
                     window.location.href = '/Kitchen';
                 } else {
                     alert('Error: ' + res.message);
+                    submitBtn.prop('disabled', false).html('<i class="fa-solid fa-fire text-danger"></i> Confirm Order & Send KOT');
                 }
+            },
+            error: function(err) {
+                alert('Server error creating order.');
+                submitBtn.prop('disabled', false).html('<i class="fa-solid fa-fire text-danger"></i> Confirm Order & Send KOT');
             }
         });
     }
+
+    $(document).ready(function() {
+        onOrderTypeChange();
+        onWaiterChange();
+    });
 </script>
 }

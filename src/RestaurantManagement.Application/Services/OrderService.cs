@@ -25,6 +25,55 @@ public class OrderService : IOrderService
             {
                 throw new InvalidOperationException("Selected table is unavailable for new orders.");
             }
+
+            // Customer adding items to existing table order
+            if (table.CurrentOrderId.HasValue && (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing))
+            {
+                var existingOrder = await _unitOfWork.Orders.GetByIdAsync(table.CurrentOrderId.Value);
+                if (existingOrder != null && existingOrder.Status != OrderStatus.Completed && existingOrder.Status != OrderStatus.Cancelled)
+                {
+                    decimal additionalSubtotal = 0m;
+                    foreach (var itemDto in dto.Items)
+                    {
+                        if (itemDto.Quantity <= 0) continue;
+                        var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(itemDto.MenuItemId);
+                        if (menuItem == null || menuItem.IsDeleted || !menuItem.IsAvailable) continue;
+
+                        decimal price = menuItem.Price;
+                        decimal itemTotal = price * itemDto.Quantity;
+                        additionalSubtotal += itemTotal;
+
+                        existingOrder.Items.Add(new OrderItem
+                        {
+                            OrderId = existingOrder.Id,
+                            MenuItemId = menuItem.Id,
+                            ItemName = menuItem.Name,
+                            UnitPrice = price,
+                            Quantity = itemDto.Quantity,
+                            TotalPrice = itemTotal,
+                            SpecialInstructions = itemDto.SpecialInstructions
+                        });
+                    }
+
+                    existingOrder.SubTotal += additionalSubtotal;
+                    existingOrder.CGST = Math.Round(existingOrder.SubTotal * 0.025m, 2);
+                    existingOrder.SGST = Math.Round(existingOrder.SubTotal * 0.025m, 2);
+                    existingOrder.TotalTax = existingOrder.CGST + existingOrder.SGST;
+                    existingOrder.GrandTotal = existingOrder.SubTotal + existingOrder.TotalTax - existingOrder.DiscountAmount;
+                    if (dto.WaiterId.HasValue && dto.WaiterId.Value > 0) existingOrder.WaiterId = dto.WaiterId;
+                    if (!string.IsNullOrWhiteSpace(dto.SpecialInstructions))
+                    {
+                        existingOrder.SpecialInstructions = string.IsNullOrWhiteSpace(existingOrder.SpecialInstructions)
+                            ? dto.SpecialInstructions
+                            : $"{existingOrder.SpecialInstructions}; {dto.SpecialInstructions}";
+                    }
+
+                    await _unitOfWork.Orders.UpdateAsync(existingOrder);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return await GetOrderByIdAsync(existingOrder.Id) ?? throw new InvalidOperationException("Order update failed.");
+                }
+            }
         }
 
         int count = await _unitOfWork.Orders.CountAsync();

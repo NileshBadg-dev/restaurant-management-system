@@ -10,12 +10,18 @@ public class OrdersController : Controller
     private readonly IOrderService _orderService;
     private readonly IMenuService _menuService;
     private readonly ITableService _tableService;
+    private readonly IStaffService _staffService;
 
-    public OrdersController(IOrderService orderService, IMenuService menuService, ITableService tableService)
+    public OrdersController(
+        IOrderService orderService, 
+        IMenuService menuService, 
+        ITableService tableService,
+        IStaffService staffService)
     {
         _orderService = orderService;
         _menuService = menuService;
         _tableService = tableService;
+        _staffService = staffService;
     }
 
     public async Task<IActionResult> Index(OrderStatus? status, OrderType? type)
@@ -24,12 +30,16 @@ public class OrdersController : Controller
         return View(orders);
     }
 
-    public async Task<IActionResult> POS(int? tableId)
+    public async Task<IActionResult> POS(int? tableId, string? returnUrl = null)
     {
         ViewBag.Categories = await _menuService.GetCategoriesAsync();
         ViewBag.MenuItems = await _menuService.GetMenuItemsAsync();
         ViewBag.Tables = await _tableService.GetAllTablesAsync();
         ViewBag.SelectedTableId = tableId;
+        ViewBag.ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? "/Dashboard" : returnUrl;
+
+        var employees = await _staffService.GetEmployeesAsync();
+        ViewBag.Waiters = employees.Where(e => e.Role == UserRole.Waiter || e.Role == UserRole.Manager || e.Role == UserRole.Cashier).ToList();
 
         TableDto? selectedTable = null;
         if (tableId.HasValue)

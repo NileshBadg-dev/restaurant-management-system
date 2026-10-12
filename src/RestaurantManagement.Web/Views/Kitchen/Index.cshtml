@@ -6,13 +6,29 @@
     var readyKots = Model.Where(k => k.Status == KOTStatus.Ready).ToList();
 }
 
-<div class="row mb-4 align-items-center">
-    <div class="col-md-8">
-        <h2 class="fw-bold mb-1"><i class="fa-solid fa-kitchen-set text-warning me-2"></i>Kitchen Display System (KDS)</h2>
-        <p class="text-secondary mb-0">Real-time KOT order preparation queue for chefs and kitchen staff.</p>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 fs-6">
+                <li class="breadcrumb-item">
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success">
+                        <i class="fa-solid fa-chart-pie me-1" data-bs-toggle="tooltip" title="Dashboard"></i> Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
+                    <i class="fa-solid fa-kitchen-set text-warning me-1"></i> Kitchen KDS
+                </li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-kitchen-set text-warning me-2"></i>Kitchen Display System (KDS)
+        </h2>
     </div>
-    <div class="col-md-4 text-md-end">
-        <button onclick="window.location.reload();" class="btn btn-outline-light rounded-pill px-4">
+    <div class="d-flex gap-2">
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to Dashboard">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <button onclick="window.location.reload();" class="btn btn-outline-primary rounded-pill px-4 shadow-sm">
             <i class="fa-solid fa-rotate me-1"></i> Refresh Queue
         </button>
     </div>

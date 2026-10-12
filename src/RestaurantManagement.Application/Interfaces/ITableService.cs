@@ -15,4 +15,7 @@ public interface ITableService
     Task<bool> TransferTableAsync(int sourceTableId, int targetTableId);
     Task<bool> MergeTablesAsync(int sourceTableId, int targetTableId);
     Task<FloorDto> CreateFloorAsync(FloorCreateUpdateDto dto);
+    Task<FloorDto?> GetFloorByIdAsync(int id);
+    Task<FloorDto> UpdateFloorAsync(int id, FloorCreateUpdateDto dto);
+    Task<bool> DeleteFloorAsync(int id);
 }

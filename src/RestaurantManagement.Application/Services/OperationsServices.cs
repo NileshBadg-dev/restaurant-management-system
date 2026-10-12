@@ -123,6 +123,13 @@ public class StaffService : IStaffService
         return employees.Where(e => !e.IsDeleted).Select(MapToDto);
     }
 
+    public async Task<EmployeeDto?> GetEmployeeByIdAsync(int id)
+    {
+        var emp = await _unitOfWork.Employees.GetByIdAsync(id);
+        if (emp == null || emp.IsDeleted) return null;
+        return MapToDto(emp);
+    }
+
     public async Task<EmployeeDto> CreateEmployeeAsync(EmployeeDto dto)
     {
         var emp = new Employee
@@ -131,9 +138,9 @@ public class StaffService : IStaffService
             Email = dto.Email,
             Phone = dto.Phone,
             Role = dto.Role,
-            JoiningDate = DateTime.UtcNow,
+            JoiningDate = dto.JoiningDate == default ? DateTime.UtcNow : dto.JoiningDate,
             BaseSalary = dto.BaseSalary,
-            Shift = dto.Shift,
+            Shift = string.IsNullOrWhiteSpace(dto.Shift) ? "Morning" : dto.Shift,
             IsActive = true
         };
 
@@ -141,6 +148,38 @@ public class StaffService : IStaffService
         await _unitOfWork.SaveChangesAsync();
 
         return MapToDto(emp);
+    }
+
+    public async Task<EmployeeDto> UpdateEmployeeAsync(int id, EmployeeDto dto)
+    {
+        var emp = await _unitOfWork.Employees.GetByIdAsync(id);
+        if (emp == null || emp.IsDeleted) throw new KeyNotFoundException($"Employee with id {id} not found.");
+
+        emp.Name = dto.Name;
+        emp.Email = dto.Email;
+        emp.Phone = dto.Phone;
+        emp.Role = dto.Role;
+        emp.BaseSalary = dto.BaseSalary;
+        emp.Shift = string.IsNullOrWhiteSpace(dto.Shift) ? emp.Shift : dto.Shift;
+        emp.IsActive = dto.IsActive;
+        emp.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Employees.UpdateAsync(emp);
+        await _unitOfWork.SaveChangesAsync();
+
+        return MapToDto(emp);
+    }
+
+    public async Task<bool> DeleteEmployeeAsync(int id)
+    {
+        var emp = await _unitOfWork.Employees.GetByIdAsync(id);
+        if (emp == null || emp.IsDeleted) return false;
+
+        emp.IsDeleted = true;
+        emp.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Employees.UpdateAsync(emp);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
     }
 
     public async Task<IEnumerable<AttendanceDto>> GetTodayAttendanceAsync()
@@ -318,6 +357,90 @@ public class DashboardService : IDashboardService
 
         var floorTables = (await _tableService.GetFloorsWithTablesAsync()).ToList();
 
+        var sevenDaysAgo = today.AddDays(-6);
+        var weeklyOrders = activeOrders.Where(o => o.CreatedAt.Date >= sevenDaysAgo && o.CreatedAt.Date <= today).ToList();
+        var weeklyTrend = new List<DailySalesSummaryDto>();
+        for (int i = 6; i >= 0; i--)
+        {
+            var d = today.AddDays(-i);
+            var dayOrders = weeklyOrders.Where(o => o.CreatedAt.Date == d && o.Status == OrderStatus.Completed).ToList();
+            weeklyTrend.Add(new DailySalesSummaryDto
+            {
+                Date = d,
+                SalesAmount = dayOrders.Sum(o => o.GrandTotal),
+                OrdersCount = dayOrders.Count
+            });
+        }
+
+        int dineInCount = activeOrders.Count(o => o.OrderType == OrderType.DineIn && o.CreatedAt.Date == today);
+        int takeawayCount = activeOrders.Count(o => o.OrderType == OrderType.Takeaway && o.CreatedAt.Date == today);
+        int deliveryCount = activeOrders.Count(o => o.OrderType == OrderType.Delivery && o.CreatedAt.Date == today);
+        if (dineInCount == 0 && takeawayCount == 0 && deliveryCount == 0 && activeOrders.Any())
+        {
+            dineInCount = activeOrders.Count(o => o.OrderType == OrderType.DineIn);
+            takeawayCount = activeOrders.Count(o => o.OrderType == OrderType.Takeaway);
+            deliveryCount = activeOrders.Count(o => o.OrderType == OrderType.Delivery);
+        }
+
+        var allEmployees = (await _unitOfWork.Employees.GetAllAsync()).Where(e => !e.IsDeleted).ToList();
+        var todayAttendances = (await _unitOfWork.Attendances.FindAsync(a => a.Date == today && !a.IsDeleted && a.Status == "Present")).ToList();
+
+        var roleAttendanceList = new List<RoleStaffCountDto>();
+        var rolesToReport = new[] { UserRole.Manager, UserRole.Cook, UserRole.Waiter, UserRole.Housekeeping, UserRole.Cashier, UserRole.KitchenStaff, UserRole.Admin };
+
+        foreach (var role in rolesToReport)
+        {
+            var roleEmployees = allEmployees.Where(e => e.Role == role).ToList();
+            if (roleEmployees.Any())
+            {
+                int totalRole = roleEmployees.Count;
+                int presentRole = roleEmployees.Count(e => todayAttendances.Any(a => a.EmployeeId == e.Id) || e.IsActive);
+                string displayRoleName = role switch
+                {
+                    UserRole.Cook => "Chefs / Cooks",
+                    UserRole.KitchenStaff => "Kitchen Staff",
+                    UserRole.Housekeeping => "Housekeeping",
+                    UserRole.Waiter => "Waiters",
+                    UserRole.Manager => "Managers",
+                    UserRole.Cashier => "Cashiers",
+                    UserRole.Admin => "Admins",
+                    _ => role.ToString()
+                };
+
+                roleAttendanceList.Add(new RoleStaffCountDto
+                {
+                    RoleName = displayRoleName,
+                    TotalCount = totalRole,
+                    PresentCount = presentRole
+                });
+            }
+        }
+
+        int totalStaff = allEmployees.Count;
+        int presentStaff = allEmployees.Count(e => todayAttendances.Any(a => a.EmployeeId == e.Id) || e.IsActive);
+
+        var tableDict = tables.ToDictionary(t => t.Id, t => t.TableNumber);
+        var orderItemQtyDict = orderItems.Where(i => !i.IsDeleted)
+            .GroupBy(i => i.OrderId)
+            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+
+        var recentOrders = activeOrders
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(6)
+            .Select(o => new RecentOrderSummaryDto
+            {
+                Id = o.Id,
+                OrderNumber = o.OrderNumber,
+                OrderType = o.OrderType.ToString(),
+                Status = o.Status.ToString(),
+                TableId = o.TableId,
+                TableNumber = o.TableId.HasValue && tableDict.TryGetValue(o.TableId.Value, out var num) ? num : string.Empty,
+                GrandTotal = o.GrandTotal,
+                TotalItems = orderItemQtyDict.TryGetValue(o.Id, out var qty) ? qty : 0,
+                CreatedAt = o.CreatedAt
+            })
+            .ToList();
+
         return new DashboardSummaryDto
         {
             TodaySales = todaySales,
@@ -332,7 +455,15 @@ public class DashboardService : IDashboardService
             CancelledOrdersCount = cancelledCount,
             LowStockAlerts = lowStock,
             TopSellingItems = topSelling,
-            FloorTables = floorTables
+            FloorTables = floorTables,
+            WeeklySalesTrend = weeklyTrend,
+            DineInOrdersCount = dineInCount,
+            TakeawayOrdersCount = takeawayCount,
+            DeliveryOrdersCount = deliveryCount,
+            StaffRoleAttendance = roleAttendanceList,
+            TotalStaffCount = totalStaff,
+            PresentStaffCount = presentStaff,
+            RecentOrders = recentOrders
         };
     }
 }

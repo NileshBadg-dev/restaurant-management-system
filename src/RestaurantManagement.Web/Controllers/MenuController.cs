@@ -28,10 +28,14 @@ public class MenuController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(MenuItemCreateUpdateDto dto)
+    public async Task<IActionResult> Create(MenuItemCreateUpdateDto dto, string? returnUrl = null)
     {
         await _menuService.CreateMenuItemAsync(dto);
         TempData["Success"] = "New menu item added successfully!";
+        if (!string.IsNullOrEmpty(returnUrl))
+        {
+            return Redirect(returnUrl);
+        }
         return RedirectToAction(nameof(Index));
     }
 }

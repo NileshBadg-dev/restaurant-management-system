@@ -20,8 +20,8 @@
             <!-- Sidebar Header / Brand -->
             <div class="sidebar-header">
                 <a class="sidebar-brand" href="/" title="Girana Garden">
-                    <div class="brand-logo-img">
-                        <i class="fa-solid fa-leaf text-white"></i>
+                    <div class="brand-logo-img" style="border-radius: 50% !important; background: #059669 !important; font-weight: 800; font-size: 1.25rem;">
+                        G
                     </div>
                     <span class="brand-text luxury-brand-title">Girana Garden</span>
                 </a>
@@ -33,47 +33,52 @@
             <!-- Sidebar Vertical Navigation Tabs with Vibrant Icon Colors -->
             <nav class="sidebar-nav">
                 <div class="nav flex-column">
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard" data-title="Dashboard">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard" data-title="Dashboard" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
                         <i class="fa-solid fa-chart-pie nav-icon" style="color: #10b981;"></i>
                         <span class="nav-text">Dashboard</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tables" ? "active" : "")" href="/Tables" data-title="Tables & Floor">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tables" ? "active" : "")" href="/Tables" data-title="Tables & Floor" data-bs-toggle="tooltip" data-bs-placement="right" title="Tables & Floor">
                         <i class="fa-solid fa-chair nav-icon" style="color: #f59e0b;"></i>
                         <span class="nav-text">Tables & Floor</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "POS" ? "active" : "")" href="/Orders/POS" data-title="New POS Order">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "POS" ? "active" : "")" href="/Orders/POS" data-title="New POS Order" data-bs-toggle="tooltip" data-bs-placement="right" title="New POS Order">
                         <i class="fa-solid fa-cash-register nav-icon" style="color: #6366f1;"></i>
                         <span class="nav-text">New POS Order</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" href="/Orders" data-title="All Orders">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" href="/Orders" data-title="All Orders" data-bs-toggle="tooltip" data-bs-placement="right" title="All Orders">
                         <i class="fa-solid fa-receipt nav-icon" style="color: #0284c7;"></i>
                         <span class="nav-text">All Orders</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Kitchen" ? "active" : "")" href="/Kitchen" data-title="Kitchen KDS">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Kitchen" ? "active" : "")" href="/Kitchen" data-title="Kitchen KDS" data-bs-toggle="tooltip" data-bs-placement="right" title="Kitchen (KDS)">
                         <i class="fa-solid fa-kitchen-set nav-icon" style="color: #ef4444;"></i>
                         <span class="nav-text">Kitchen (KDS)</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Billing" ? "active" : "")" href="/Billing" data-title="Billing & Payments">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Billing" ? "active" : "")" href="/Billing" data-title="Billing & Payments" data-bs-toggle="tooltip" data-bs-placement="right" title="Billing & Payments">
                         <i class="fa-solid fa-file-invoice-dollar nav-icon" style="color: #8b5cf6;"></i>
                         <span class="nav-text">Billing & Payments</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Menu" ? "active" : "")" href="/Menu" data-title="Menu Items">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Menu" ? "active" : "")" href="/Menu" data-title="Menu Items" data-bs-toggle="tooltip" data-bs-placement="right" title="Menu Items">
                         <i class="fa-solid fa-bowl-food nav-icon" style="color: #0d9488;"></i>
                         <span class="nav-text">Menu Items</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "active" : "")" href="/Inventory" data-title="Stock & Inventory">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Masters" ? "active" : "")" href="/Masters" data-title="Masters" data-bs-toggle="tooltip" data-bs-placement="right" title="Masters">
+                        <i class="fa-solid fa-layer-group nav-icon" style="color: #ec4899;"></i>
+                        <span class="nav-text">Masters</span>
+                    </a>
+
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "active" : "")" href="/Inventory" data-title="Stock & Inventory" data-bs-toggle="tooltip" data-bs-placement="right" title="Stock & Inventory">
                         <i class="fa-solid fa-boxes-stacked nav-icon" style="color: #64748b;"></i>
                         <span class="nav-text">Stock</span>
                     </a>
 
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")" href="/Reports" data-title="Reports & Analytics">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")" href="/Reports" data-title="Reports & Analytics" data-bs-toggle="tooltip" data-bs-placement="right" title="Reports & Analytics">
                         <i class="fa-solid fa-chart-line nav-icon" style="color: #d97706;"></i>
                         <span class="nav-text">Reports</span>
                     </a>
@@ -83,42 +88,45 @@
 
         <!-- Main Content Area -->
         <div class="app-main">
-            <!-- Top Header Navbar -->
-            <header class="top-header sticky-top">
-                <div class="d-flex align-items-center justify-content-between w-100">
-                    <div class="d-flex align-items-center gap-3">
-                        <button class="btn btn-outline-secondary btn-sm rounded-circle d-md-none" id="mobileSidebarToggle">
-                            <i class="fa-solid fa-bars"></i>
-                        </button>
-                        <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
-                            <i class="fa-solid fa-utensils text-success fs-4"></i>
-                            <span class="luxury-brand-title">Girana Garden</span>
-                        </a>
-                    </div>
-                    
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Live Date & Time Clock with Thin Border -->
-                        <div class="live-clock-badge d-none d-md-flex" title="Current Local Time" style="border: 1.5px solid #cbd5e1;">
-                            <i class="fa-regular fa-clock text-success"></i>
-                            <span id="liveClockText">Loading...</span>
-                        </div>
-
-                        <!-- Quick Role Switcher with Styled Dropdown & Logos -->
-                        <div class="dropdown">
-                            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 shadow-sm" type="button" data-bs-toggle="dropdown">
-                                <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">Manager</strong>
+            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Dashboard")
+            {
+                <!-- Top Header Navbar -->
+                <header class="top-header sticky-top">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                        <div class="d-flex align-items-center gap-3">
+                            <button class="btn btn-outline-secondary btn-sm rounded-circle d-md-none" id="mobileSidebarToggle">
+                                <i class="fa-solid fa-bars"></i>
                             </button>
-                            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg">
-                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
-                                <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-white me-2"></i> Manager</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cash-register text-success me-2"></i> Cashier</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
-                                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
-                            </ul>
+                            <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-utensils text-success fs-4"></i>
+                                <span class="luxury-brand-title">Girana Garden</span>
+                            </a>
+                        </div>
+                        
+                        <div class="d-flex align-items-center gap-3">
+                            <!-- Live Date & Time Clock with Thin Border -->
+                            <div class="live-clock-badge d-none d-md-flex" title="Current Local Time" style="border: 1.5px solid #cbd5e1;">
+                                <i class="fa-regular fa-clock text-success"></i>
+                                <span id="liveClockText">Loading...</span>
+                            </div>
+
+                            <!-- Quick Role Switcher with Styled Dropdown & Logos -->
+                            <div class="dropdown">
+                                <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 shadow-sm" type="button" data-bs-toggle="dropdown">
+                                    <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">Manager</strong>
+                                </button>
+                                <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg">
+                                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
+                                    <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-white me-2"></i> Manager</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cash-register text-success me-2"></i> Cashier</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </header>
+                </header>
+            }
 
             <!-- Main Body Container -->
             <main role="main" class="main-content py-4 px-4">
@@ -135,6 +143,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Live Clock Script
@@ -187,6 +196,15 @@
             }
 
             updateSidebarState();
+
+            // Initialize all Bootstrap 5 tooltips across the application
+            function initTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl, { trigger: 'hover' });
+                });
+            }
+            initTooltips();
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

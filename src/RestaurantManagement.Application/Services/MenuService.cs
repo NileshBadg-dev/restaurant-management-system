@@ -67,6 +67,36 @@ public class MenuService : IMenuService
         return dto;
     }
 
+    public async Task<CategoryDto> UpdateCategoryAsync(int id, CategoryDto dto)
+    {
+        var category = await _unitOfWork.Categories.GetByIdAsync(id);
+        if (category == null || category.IsDeleted) throw new KeyNotFoundException($"Category with id {id} not found.");
+
+        category.Name = dto.Name;
+        category.Description = dto.Description;
+        category.DisplayOrder = dto.DisplayOrder;
+        category.ImageUrl = dto.ImageUrl;
+        category.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.Categories.UpdateAsync(category);
+        await _unitOfWork.SaveChangesAsync();
+
+        dto.Id = category.Id;
+        return dto;
+    }
+
+    public async Task<bool> DeleteCategoryAsync(int id)
+    {
+        var category = await _unitOfWork.Categories.GetByIdAsync(id);
+        if (category == null || category.IsDeleted) return false;
+
+        category.IsDeleted = true;
+        category.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Categories.UpdateAsync(category);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<IEnumerable<MenuItemDto>> GetMenuItemsAsync(int? categoryId = null, bool? isVeg = null, string? search = null)
     {
         var items = await _unitOfWork.MenuItems.GetAllAsync();

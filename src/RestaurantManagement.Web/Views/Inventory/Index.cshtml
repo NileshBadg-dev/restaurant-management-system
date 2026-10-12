@@ -3,33 +3,51 @@
     ViewData["Title"] = "Inventory & Stock";
 }
 
-<div class="row mb-4 align-items-center">
-    <div class="col-md-8">
-        <h2 class="fw-bold mb-1"><i class="fa-solid fa-boxes-stacked text-info me-2"></i>Inventory & Stock Management</h2>
-        <p class="text-secondary mb-0">Track raw ingredients, minimum stock thresholds, stock-in/out adjustments, and critical alerts.</p>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 fs-6">
+                <li class="breadcrumb-item">
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success">
+                        <i class="fa-solid fa-chart-pie me-1" data-bs-toggle="tooltip" title="Dashboard"></i> Dashboard
+                    </a>
+                </li>
+                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
+                    <i class="fa-solid fa-boxes-stacked text-info me-1"></i> Inventory & Stock
+                </li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="fa-solid fa-boxes-stacked text-info me-2"></i>Inventory & Stock
+        </h2>
+    </div>
+    <div>
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to Dashboard">
+            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
     </div>
 </div>
 
 @if (TempData["Success"] != null)
 {
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
+    <div class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
         <i class="fa-solid fa-circle-check me-2"></i>@TempData["Success"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 @if (TempData["Error"] != null)
 {
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
         <i class="fa-solid fa-triangle-exclamation me-2"></i>@TempData["Error"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
 
-<div class="glass-card p-4">
+<div class="glass-card p-4 animated-fade-in">
     <div class="table-responsive">
-        <table class="table table-dark table-hover align-middle">
+        <table class="table app-datagrid align-middle">
             <thead>
-                <tr class="text-secondary">
+                <tr>
                     <th>Ingredient Item</th>
                     <th>Category</th>
                     <th>Current Stock</th>
@@ -43,25 +61,25 @@
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <td class="fw-bold text-white">@item.Name</td>
-                        <td><span class="badge bg-secondary">@item.Category</span></td>
-                        <td class="fw-bold fs-5 @(item.IsLowStock ? "text-danger" : "text-success")">
+                        <td class="fw-bold text-dark">@item.Name</td>
+                        <td><span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle rounded-pill px-3 py-1">@item.Category</span></td>
+                        <td class="fw-bold fs-6 @(item.IsLowStock ? "text-danger" : "text-success")">
                             @item.CurrentStock @item.Unit
                         </td>
                         <td class="small text-secondary">@item.MinimumStock @item.Unit</td>
-                        <td>₹@item.UnitCost.ToString("N0") / @item.Unit</td>
+                        <td class="text-dark">₹@item.UnitCost.ToString("N0") / @item.Unit</td>
                         <td>
                             @if (item.CurrentStock <= (item.MinimumStock / 2m))
                             {
-                                <span class="badge bg-danger px-3 py-2"><i class="fa-solid fa-circle-exclamation me-1"></i> CRITICAL LOW</span>
+                                <span class="badge bg-danger px-3 py-1 rounded-pill"><i class="fa-solid fa-circle-exclamation me-1"></i> Critical Low</span>
                             }
                             else if (item.IsLowStock)
                             {
-                                <span class="badge bg-warning text-dark px-3 py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i> LOW STOCK</span>
+                                <span class="badge bg-warning text-dark px-3 py-1 rounded-pill"><i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock</span>
                             }
                             else
                             {
-                                <span class="badge bg-success px-3 py-2"><i class="fa-solid fa-circle-check me-1"></i> Optimal</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-circle-check me-1"></i> Optimal</span>
                             }
                         </td>
                         <td class="text-end">
@@ -74,33 +92,33 @@
                     <!-- Stock Adjust Modal -->
                     <div class="modal fade" id="adjustModal-@item.Id" tabindex="-1">
                         <div class="modal-dialog">
-                            <form asp-action="AdjustStock" method="post" class="modal-content text-start">
+                            <form asp-action="AdjustStock" method="post" class="modal-content rounded-4 border-0 shadow-lg text-start">
                                 <input type="hidden" name="InventoryItemId" value="@item.Id" />
-                                <div class="modal-header">
-                                    <h5 class="modal-title text-white"><i class="fa-solid fa-sliders me-2"></i>Adjust Stock: @item.Name</h5>
+                                <div class="modal-header border-bottom">
+                                    <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-sliders me-2 text-primary"></i>Adjust Stock: @item.Name</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                 </div>
                                 <div class="modal-body">
                                     <div class="mb-3">
-                                        <label class="form-label text-secondary">Action Type</label>
-                                        <select name="TransactionType" class="form-select bg-dark text-white border-secondary">
+                                        <label class="form-label fw-bold small">Action Type</label>
+                                        <select name="TransactionType" class="form-select">
                                             <option value="IN">Stock In (Purchase Receive)</option>
                                             <option value="OUT">Stock Out (Manual Deduction)</option>
                                             <option value="WASTAGE">Wastage / Spoiled</option>
                                         </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label text-secondary">Quantity (@item.Unit)</label>
-                                        <input type="number" step="0.01" name="Quantity" class="form-control bg-dark text-white border-secondary" placeholder="e.g. 10" required />
+                                        <label class="form-label fw-bold small">Quantity (@item.Unit)</label>
+                                        <input type="number" step="0.01" name="Quantity" class="form-control" placeholder="e.g. 10" required />
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label text-secondary">Notes / Reason</label>
-                                        <input type="text" name="Notes" class="form-control bg-dark text-white border-secondary" placeholder="Fresh stock received from supplier..." />
+                                        <label class="form-label fw-bold small">Notes / Reason</label>
+                                        <input type="text" name="Notes" class="form-control" placeholder="Fresh stock received from supplier..." />
                                     </div>
                                 </div>
-                                <div class="modal-footer">
+                                <div class="modal-footer border-top">
                                     <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary rounded-pill px-4">Update Stock</button>
+                                    <button type="submit" class="btn btn-primary rounded-pill px-4">Save Adjustment</button>
                                 </div>
                             </form>
                         </div>

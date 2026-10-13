@@ -210,6 +210,33 @@
                 });
             }
             initTooltips();
+
+            // Interactive Role Switcher
+            document.addEventListener('click', function (e) {
+                const item = e.target.closest('.role-dropdown-menu .dropdown-item');
+                if (item) {
+                    e.preventDefault();
+                    const dropdown = item.closest('.dropdown');
+                    if (dropdown) {
+                        dropdown.querySelectorAll('.dropdown-item').forEach(function (el) {
+                            el.classList.remove('active');
+                            const icon = el.querySelector('i');
+                            if (icon) {
+                                icon.classList.remove('text-white');
+                            }
+                        });
+                        item.classList.add('active');
+                        const activeIcon = item.querySelector('i');
+                        if (activeIcon) {
+                            activeIcon.classList.add('text-white');
+                        }
+                        const roleBtnLabel = dropdown.querySelector('.role-dropdown-btn strong');
+                        if (roleBtnLabel) {
+                            roleBtnLabel.textContent = item.textContent.trim();
+                        }
+                    }
+                }
+            });
         });
     </script>
     @await RenderSectionAsync("Scripts", required: false)

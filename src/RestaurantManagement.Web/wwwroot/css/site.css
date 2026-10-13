@@ -333,6 +333,12 @@ p, .text-secondary, .text-muted {
     box-shadow: var(--shadow-sm);
 }
 
+/* Dashboard Top Bar Stacking Context */
+.dashboard-top-bar {
+    position: relative;
+    z-index: 1050;
+}
+
 /* Role Button & Dropdown List Styling */
 .role-dropdown-btn {
     border: 1.5px solid var(--border-color) !important;
@@ -347,6 +353,7 @@ p, .text-secondary, .text-muted {
     padding: 8px !important;
     box-shadow: var(--shadow-lg) !important;
     background: #ffffff !important;
+    z-index: 1060 !important;
 }
 
 .role-dropdown-menu .dropdown-item {

@@ -4,7 +4,7 @@
 }
 
 <!-- Top Header Bar Matching Screenshot -->
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 anim-section">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 anim-section dashboard-top-bar position-relative" style="z-index: 1050;">
     <div>
         <div class="text-muted small fw-semibold" style="font-size: 0.825rem;">Good afternoon, Manager</div>
         <h2 class="fw-bold mb-0" style="color: #047857; font-family: var(--font-heading); font-size: 1.75rem; letter-spacing: -0.5px;">
@@ -24,13 +24,13 @@
         </a>
 
         <!-- Live Role Display & Switcher (FR-AUTH-05) -->
-        <div class="dropdown">
-            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 border bg-white fw-semibold" type="button" data-bs-toggle="dropdown" style="font-size: 0.825rem; border-color: #cbd5e1 !important;" title="Active User Role">
+        <div class="dropdown position-relative" style="z-index: 1055;">
+            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 border bg-white fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.825rem; border-color: #cbd5e1 !important;" title="Active User Role">
                 <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">Manager</strong>
             </button>
-            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="border-radius: 12px; border: 1.5px solid #cbd5e1;">
+            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="border-radius: 12px; border: 1.5px solid #cbd5e1; z-index: 1060;">
                 <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
-                <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-success me-2"></i> Manager</a></li>
+                <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-white me-2"></i> Manager</a></li>
                 <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cash-register text-primary me-2"></i> Cashier</a></li>
                 <li><a class="dropdown-item" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
                 <li><a class="dropdown-item" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
@@ -40,7 +40,7 @@
 </div>
 
 <!-- Row 1: Key Metrics Cards (5 Color-Badged Clean Cards with Distinct Borders & Bold Typography) -->
-<div class="row g-3 mb-4 anim-section anim-delay-1">
+<div class="row g-3 mb-4 anim-section anim-delay-1 position-relative" style="z-index: 1;">
     <!-- Card 1: Today's Sales -->
     <div class="col-xl col-md-4 col-sm-6">
         <div class="metric-card-clean metric-card-sales-border">
@@ -210,7 +210,7 @@
                                         }
                                     </div>
                                     <div class="d-flex gap-1">
-                                        <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
+                                        <a href="/Orders/POS?tableId=@table.Id&orderId=@table.CurrentOrderId&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
                                         <a href="/Tables/Details/@table.Id" class="btn btn-sm rounded-pill fw-bold btn-table-view px-2">View</a>
                                         <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-bill px-3">Bill</a>
                                     </div>
@@ -229,7 +229,7 @@
                                         <span class="fw-bold text-dark fs-6">₹@table.CurrentOrderAmount.ToString("N0")</span>
                                     </div>
                                     <div class="d-flex gap-1">
-                                        <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
+                                        <a href="/Orders/POS?tableId=@table.Id&orderId=@table.CurrentOrderId&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
                                         <a href="/Tables/Details/@table.Id" class="btn btn-sm rounded-pill fw-bold btn-table-view px-2">View</a>
                                         <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-bill px-3">Bill</a>
                                     </div>

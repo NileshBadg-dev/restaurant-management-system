@@ -13,4 +13,11 @@ public class Table : BaseEntity
     public Order? CurrentOrder { get; set; }
     public int? WaiterId { get; set; }
     public User? Waiter { get; set; }
+    
+    // Order Management Specifications (OM-A03, OM-A04, OM-E03)
+    public bool HasActiveDraft { get; set; } = false;
+    public int? ActiveDraftUserId { get; set; }
+    public string ActiveDraftUserName { get; set; } = string.Empty;
+    public DateTime? ActiveDraftTime { get; set; }
+    public int? GroupTableId { get; set; } // For tables pushed together (OM-E03)
 }

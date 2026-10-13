@@ -10,4 +10,8 @@ public class KOTItem : BaseEntity
     public int Quantity { get; set; }
     public string SpecialInstructions { get; set; } = string.Empty;
     public KOTStatus Status { get; set; } = KOTStatus.New;
+    public int? OrderItemId { get; set; }
+    public string Course { get; set; } = "Main";
+    public bool IsCancelled { get; set; } = false;
+    public string Station { get; set; } = "Main";
 }

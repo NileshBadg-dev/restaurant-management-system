@@ -283,7 +283,10 @@ public class TableService : ITableService
             CurrentOrderNumber = orderNo,
             CurrentOrderAmount = amount,
             WaiterId = t.WaiterId,
-            WaiterName = waiterName
+            WaiterName = waiterName,
+            HasActiveDraft = t.HasActiveDraft,
+            ActiveDraftUserName = t.ActiveDraftUserName,
+            ActiveDraftMinutesAgo = t.ActiveDraftTime.HasValue ? (int?)(DateTime.UtcNow - t.ActiveDraftTime.Value).TotalMinutes : null
         };
     }
 }

@@ -277,6 +277,17 @@ public class MastersController : Controller
             setting.CGSTPercentage = updated.CGSTPercentage;
             setting.SGSTPercentage = updated.SGSTPercentage;
             setting.ServiceChargePercentage = updated.ServiceChargePercentage;
+            setting.KitchenMode = updated.KitchenMode;
+            setting.TrackReadyStatus = updated.TrackReadyStatus;
+            setting.AutoMarkServedMinutes = updated.AutoMarkServedMinutes;
+            setting.VoidApproval = updated.VoidApproval;
+            setting.AllowBillingWithUnservedItems = updated.AllowBillingWithUnservedItems;
+            setting.KitchenLiteScreen = updated.KitchenLiteScreen;
+            setting.SinglePersonMode = updated.SinglePersonMode;
+            setting.DraftExpiryHours = updated.DraftExpiryHours;
+            setting.PackagingCharge = updated.PackagingCharge;
+            setting.DeliveryCharge = updated.DeliveryCharge;
+            if (!string.IsNullOrWhiteSpace(updated.ManagerPIN)) setting.ManagerPIN = updated.ManagerPIN;
             setting.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.RestaurantSettings.UpdateAsync(setting);
         }

@@ -1,281 +1,591 @@
 @{
-    ViewData["Title"] = "POS - New Order";
+    ViewData["Title"] = "POS - Order Management";
     var categories = ViewBag.Categories as IEnumerable<CategoryDto> ?? new List<CategoryDto>();
     var menuItems = ViewBag.MenuItems as IEnumerable<MenuItemDto> ?? new List<MenuItemDto>();
     var tables = ViewBag.Tables as IEnumerable<TableDto> ?? new List<TableDto>();
     var waiters = ViewBag.Waiters as IEnumerable<EmployeeDto> ?? new List<EmployeeDto>();
     var selectedTable = ViewBag.SelectedTable as TableDto;
     int? selectedTableId = ViewBag.SelectedTableId as int?;
+    var activeOrder = ViewBag.ActiveOrder as OrderDto;
+    var activeDraft = ViewBag.ActiveDraft as OrderDto;
+    var setting = ViewBag.Setting as RestaurantSetting ?? new RestaurantSetting();
     string returnUrl = (ViewBag.ReturnUrl as string) ?? "/Dashboard";
     string returnTitle = returnUrl.Contains("Table", StringComparison.OrdinalIgnoreCase) ? "Tables & Floor" : "Dashboard";
-    
-    // Default waiter from selected table or first waiter in staff list
-    string defaultWaiterName = selectedTable?.WaiterName ?? waiters.FirstOrDefault()?.Name ?? "Amit Kumar";
-    int defaultWaiterId = selectedTable?.WaiterId ?? waiters.FirstOrDefault()?.Id ?? 0;
+
+    var currentMode = setting.KitchenMode;
+    int orderId = activeOrder?.Id ?? activeDraft?.Id ?? 0;
+    bool isDraft = activeOrder == null;
+    string orderNumber = activeOrder?.OrderNumber ?? (activeDraft != null ? activeDraft.OrderNumber : "NEW ORDER");
+    int initialCovers = activeOrder?.Covers ?? activeDraft?.Covers ?? (selectedTable != null ? Math.Min(selectedTable.Capacity, 2) : 2);
+    int tableCapacity = selectedTable?.Capacity ?? 6;
+    string defaultWaiter = activeOrder?.WaiterName ?? activeDraft?.DraftUserName ?? selectedTable?.WaiterName ?? waiters.FirstOrDefault()?.Name ?? "Staff";
+    int defaultWaiterId = activeOrder?.WaiterId ?? selectedTable?.WaiterId ?? waiters.FirstOrDefault()?.Id ?? 0;
 }
 
-<!-- Breadcrumb & Top Bar (Description removed) -->
-<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 animated-fade-in">
-    <div>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-1 fs-6">
-                <li class="breadcrumb-item">
-                    <a href="@returnUrl" class="text-decoration-none fw-semibold text-success" data-bs-toggle="tooltip" title="Return to @returnTitle">
-                        <i class="fa-solid @(returnTitle == "Dashboard" ? "fa-chart-pie" : "fa-chair") me-1"></i> @returnTitle
-                    </a>
-                </li>
-                <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
-                    <i class="fa-solid fa-cash-register text-primary me-1"></i> Create Order (POS)
-                </li>
-            </ol>
-        </nav>
-        <h2 class="fw-bold mb-0 text-dark">
-            <i class="fa-solid fa-cash-register text-primary me-2" data-bs-toggle="tooltip" title="Point of Sale Order Creation"></i>Point of Sale (POS) Order
-        </h2>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Orders/POS" class="btn btn-outline-success rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Create a new dish in Menu items and return here">
-            <i class="fa-solid fa-plus-circle me-1"></i> Add Menu Item
-        </a>
-        <a href="@returnUrl" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to @returnTitle">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to @returnTitle
-        </a>
-    </div>
-</div>
+<style>
+    .pos-screen {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .panel-container {
+        height: calc(100vh - 170px);
+        min-height: 600px;
+    }
+    .menu-panel {
+        height: 100%;
+        overflow-y: auto;
+        border-radius: 1rem;
+        background: #ffffff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .order-panel {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border-radius: 1rem;
+        background: #ffffff;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .order-scroll-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem;
+    }
+    .sticky-order-footer {
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        border-bottom-left-radius: 1rem;
+        border-bottom-right-radius: 1rem;
+        padding: 0.75rem 1rem;
+    }
+    .menu-item-row {
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border-radius: 0.5rem;
+    }
+    .menu-item-row:hover {
+        background-color: #f1f5f9;
+        transform: translateY(-1px);
+    }
+    .status-chip {
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+    }
+    .note-chip {
+        cursor: pointer;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 9999px;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        transition: background 0.15s;
+    }
+    .note-chip:hover {
+        background: #e2e8f0;
+    }
+    .undo-toast {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1090;
+        min-width: 300px;
+    }
+    .veg-indicator {
+        width: 14px;
+        height: 14px;
+        border: 2px solid #16a34a;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        margin-right: 6px;
+    }
+    .veg-dot {
+        width: 6px;
+        height: 6px;
+        background: #16a34a;
+        border-radius: 50%;
+    }
+    .nonveg-indicator {
+        width: 14px;
+        height: 14px;
+        border: 2px solid #dc2626;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 3px;
+        margin-right: 6px;
+    }
+    .nonveg-dot {
+        width: 6px;
+        height: 6px;
+        background: #dc2626;
+        border-radius: 50%;
+    }
+</style>
 
-<div class="row g-3">
-    <!-- Left Column (8 cols): Order Context, Menu Filters, and Menu Items List -->
-    <div class="col-lg-8">
-        
-        <!-- Order Configuration Card -->
-        <div class="glass-card p-3 mb-3 animated-fade-in">
-            <div class="row g-2 align-items-center">
-                <!-- Order Type Segmented Toggle -->
-                <div class="col-md-3">
-                    <label class="form-label text-dark fw-bold small mb-1">
-                        <i class="fa-solid fa-bell-concierge text-primary me-1"></i>Order Type
-                    </label>
-                    <div class="btn-group w-100" role="group">
-                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeDineIn" value="1" checked onchange="onOrderTypeChange()">
-                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeDineIn">Dine-in</label>
-
-                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeTakeaway" value="2" onchange="onOrderTypeChange()">
-                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeTakeaway">Takeaway</label>
-
-                        <input type="radio" class="btn-check" name="orderTypeRadio" id="typeDelivery" value="3" onchange="onOrderTypeChange()">
-                        <label class="btn btn-outline-primary btn-sm py-1 fw-semibold" for="typeDelivery">Delivery</label>
-                    </div>
+<div class="pos-screen">
+    <!-- 3.1 HEADER: Order number, table, covers, waiter, running timer, mode badge -->
+    <div class="glass-card p-2 px-3 mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2 shadow-sm rounded-4">
+        <div class="d-flex align-items-center gap-3">
+            <a href="@returnUrl" class="btn btn-sm btn-outline-secondary rounded-circle" title="Back to @returnTitle">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h5 class="fw-bold mb-0 text-dark" id="displayOrderNumber">
+                        <i class="fa-solid fa-receipt text-primary me-1"></i>@orderNumber
+                    </h5>
+                    <span class="badge @(isDraft ? "bg-secondary" : "bg-primary") rounded-pill px-2 py-1" id="orderStatusBadge">
+                        @(isDraft ? "DRAFT" : activeOrder?.Status.ToString().ToUpper())
+                    </span>
+                    <!-- Rule FR-OM-01 Mode Badge -->
+                    @if (currentMode == KitchenMode.FullKDS)
+                    {
+                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
+                            <i class="fa-solid fa-desktop me-1"></i> Mode 1: Full KDS
+                        </span>
+                    }
+                    else if (currentMode == KitchenMode.PrinterOnly)
+                    {
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill small">
+                            <i class="fa-solid fa-print me-1"></i> Mode 2: Printer Only
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill small">
+                            <i class="fa-solid fa-ban me-1"></i> Mode 3: No Device
+                        </span>
+                    }
                 </div>
-
-                <!-- Table Selector -->
-                <div class="col-md-3" id="tableSelectWrapper">
-                    <label class="form-label text-dark fw-bold small mb-1">
-                        <i class="fa-solid fa-chair text-warning me-1"></i>Assigned Table
-                    </label>
-                    <select id="tableSelect" class="form-select form-select-sm">
-                        <option value="">Select Table...</option>
-                        @foreach (var t in tables)
-                        {
-                            bool isSel = selectedTableId.HasValue && selectedTableId.Value == t.Id;
-                            <option value="@t.Id" selected="@isSel">
-                                @t.TableNumber (@t.FloorName) - @t.StatusName
-                            </option>
-                        }
-                    </select>
-                </div>
-
-                <!-- Searchable Assign Waiter Field -->
-                <div class="col-md-3">
-                    <label class="form-label text-dark fw-bold small mb-1">
-                        <i class="fa-solid fa-user-tie text-info me-1"></i>Assign Waiter
-                    </label>
-                    <div class="position-relative">
-                        <input type="text" id="waiterInput" list="waiterDataList" class="form-control form-control-sm" placeholder="Search or select waiter..." value="@defaultWaiterName" onchange="onWaiterChange()" />
+                <div class="small text-muted d-flex align-items-center gap-2 mt-1">
+                    <span>
+                        <i class="fa-solid fa-chair text-warning me-1"></i>
+                        <strong>@(selectedTable != null ? $"Table {selectedTable.TableNumber} · {selectedTable.FloorName}" : "Quick Counter")</strong>
+                    </span>
+                    &bull;
+                    <span>
+                        <i class="fa-solid fa-users text-info me-1"></i>Covers: 
+                        <input type="number" id="coversInput" value="@initialCovers" min="1" max="@tableCapacity" class="form-control form-control-sm d-inline-block py-0 px-1 text-center" style="width: 48px; height: 24px;" onchange="onCoversChange()" />
+                    </span>
+                    &bull;
+                    <span>
+                        <i class="fa-solid fa-user-tie text-secondary me-1"></i>
+                        <input type="text" id="waiterInput" value="@defaultWaiter" list="waiterDataList" class="form-control form-control-sm d-inline-block py-0 px-1" style="width: 110px; height: 24px;" />
                         <datalist id="waiterDataList">
                             @foreach (var w in waiters)
                             {
-                                <option value="@w.Name" data-id="@w.Id">@w.Name (@w.Shift)</option>
+                                <option value="@w.Name">@w.Name</option>
                             }
                         </datalist>
-                        <input type="hidden" id="selectedWaiterId" value="@defaultWaiterId" />
-                    </div>
-                </div>
-
-                <!-- Customer Name & Phone -->
-                <div class="col-md-3">
-                    <label class="form-label text-dark fw-bold small mb-1">
-                        <i class="fa-solid fa-user text-success me-1"></i>Customer
-                    </label>
-                    <div class="input-group input-group-sm">
-                        <input type="text" id="customerName" class="form-control form-control-sm" placeholder="Name" value="Rahul Sharma" />
-                        <input type="tel" id="customerPhone" class="form-control form-control-sm" placeholder="Phone" value="9876543210" />
-                    </div>
+                    </span>
+                    &bull;
+                    <span id="runningTimer" class="badge bg-light text-dark border">
+                        <i class="fa-regular fa-clock me-1"></i><span id="elapsedMinutes">0</span> min
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- Filter & Search Toolbar + Quick Add Item Link -->
-        <div class="glass-card p-3 mb-3 animated-fade-in">
-            <div class="row g-2 align-items-center mb-2">
-                <div class="col-md-7">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0 text-muted">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </span>
-                        <input type="text" id="menuSearch" class="form-control border-start-0 ps-0" placeholder="Search dish by name or ingredients..." onkeyup="filterMenu()" />
-                        <button class="btn btn-outline-secondary" type="button" onclick="$('#menuSearch').val(''); filterMenu();" title="Clear">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="col-md-5 text-md-end d-flex gap-2 justify-content-end">
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-outline-secondary btn-sm active veg-filter-btn px-2" onclick="filterVeg('all', this)">All</button>
-                        <button class="btn btn-outline-success btn-sm veg-filter-btn px-2" onclick="filterVeg('veg', this)">
-                            <span class="d-inline-block rounded-1 me-1" style="width:8px; height:8px; background:#10b981;"></span> Veg
-                        </button>
-                        <button class="btn btn-outline-danger btn-sm veg-filter-btn px-2" onclick="filterVeg('nonveg', this)">
-                            <span class="d-inline-block rounded-1 me-1" style="width:8px; height:8px; background:#ef4444;"></span> Non-Veg
-                        </button>
-                    </div>
-
-                    <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Orders/POS" class="btn btn-sm btn-outline-success rounded-pill px-3" data-bs-toggle="tooltip" title="Add new item to menu catalog">
-                        <i class="fa-solid fa-plus me-1"></i> Add Item
-                    </a>
-                </div>
+        <div class="d-flex align-items-center gap-2">
+            <!-- Whole Order Note Field (FR-OM-08) -->
+            <div class="input-group input-group-sm" style="max-width: 280px;">
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-pen-nib"></i></span>
+                <input type="text" id="orderNoteInput" class="form-control border-start-0" placeholder="Order note (max 250 chars)..." maxlength="250" value="@(activeOrder?.OrderNote ?? activeDraft?.OrderNote ?? "")" onchange="autoSaveDraft()" />
             </div>
 
-            <!-- Categories Horizontal Filter Pills -->
-            <div class="d-flex gap-2 overflow-auto pb-1" style="white-space: nowrap;">
-                <button class="btn btn-sm btn-primary rounded-pill px-3 cat-btn active shadow-sm" onclick="filterCategory(0, this)">
-                    All (@menuItems.Count())
+            <!-- Quick Action Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown">
+                    <i class="fa-solid fa-ellipsis-vertical me-1"></i> More
                 </button>
-                @foreach (var cat in categories)
-                {
-                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 cat-btn shadow-sm" onclick="filterCategory(@cat.Id, this)">
-                        @cat.Name (@cat.ItemCount)
-                    </button>
-                }
-            </div>
-        </div>
-
-        <!-- Menu Items in LIST Format (Requested: "Items show in list") -->
-        <div class="glass-card p-2 animated-fade-in" style="max-height: 58vh; overflow-y: auto;">
-            <div class="list-group list-group-flush" id="menuItemList">
-                @foreach (var item in menuItems)
-                {
-                    <div class="list-group-item list-group-item-action p-2 border-bottom menu-list-row d-flex align-items-center justify-content-between"
-                         data-cat="@item.CategoryId" data-veg="@(item.IsVeg ? "veg" : "nonveg")" data-name="@item.Name.ToLower()" style="border-radius: 8px;">
-                        
-                        <!-- Left Info: Veg icon, Name, Category, Prep time -->
-                        <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 0;">
-                            <!-- Veg/Non-veg indicator -->
-                            <span class="badge @(item.IsVeg ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle") rounded-1 px-1 py-1" 
-                                  title="@(item.IsVeg ? "Vegetarian" : "Non-Vegetarian")">
-                                <i class="fa-solid @(item.IsVeg ? "fa-leaf" : "fa-drumstick-bite")" style="font-size: 0.75rem;"></i>
-                            </span>
-
-                            <div style="min-width: 0;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <span class="fw-bold text-dark fs-6 text-truncate">@item.Name</span>
-                                    <span class="badge bg-light text-secondary border small rounded-pill">@item.CategoryName</span>
-                                    @if (!item.IsAvailable)
-                                    {
-                                        <span class="badge bg-danger rounded-pill small">Sold Out</span>
-                                    }
-                                </div>
-                                <div class="small metric-desc-text text-truncate" style="max-width: 420px;">@item.Description</div>
-                            </div>
-                        </div>
-
-                        <!-- Right Info: Price, Prep time, and Add button -->
-                        <div class="d-flex align-items-center gap-3 ms-2">
-                            <div class="text-end">
-                                <span class="fw-bold text-success fs-5">₹@item.Price.ToString("N0")</span>
-                                <div class="text-muted small" style="font-size: 0.725rem;"><i class="fa-regular fa-clock me-1"></i>@item.PreparationTimeMinutes m</div>
-                            </div>
-
-                            @if (item.IsAvailable)
-                            {
-                                <button class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm d-flex align-items-center gap-1" onclick="addToCart(@item.Id, '@item.Name', @item.Price)">
-                                    <i class="fa-solid fa-plus"></i> Add
-                                </button>
-                            }
-                            else
-                            {
-                                <button class="btn btn-outline-secondary btn-sm rounded-pill px-2" disabled>Unavailable</button>
-                            }
-                        </div>
-                    </div>
-                }
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="openTransferMergeModal()"><i class="fa-solid fa-arrow-right-arrow-left me-2 text-primary"></i>Move / Merge Table</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="showEstimateSlip()"><i class="fa-solid fa-calculator me-2 text-info"></i>View Estimate Slip (OM-A22)</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" onclick="showCounterKOTSlip()"><i class="fa-solid fa-receipt me-2 text-success"></i>Counter KOT Slip (OM-A21)</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="promptCancelOrder()"><i class="fa-solid fa-ban me-2"></i>Cancel Entire Order</a></li>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- Right Column (4 cols): Attractive, Highly-Focused Cart Panel (Requested: "make current order cart section attractive and easily focused") -->
-    <div class="col-lg-4">
-        <div class="glass-card p-3 h-100 d-flex flex-column justify-content-between shadow-lg pos-cart-panel-focused" style="border-radius: 18px;">
-            <div>
-                <!-- Distinct Cart Header -->
-                <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 34px; height: 34px;">
-                            <i class="fa-solid fa-cart-shopping fs-6"></i>
-                        </div>
-                        <div>
-                            <h5 class="fw-bold mb-0 text-dark">Current Cart</h5>
-                            <span class="small text-muted" id="orderTargetDesc">Dine-in Order</span>
-                        </div>
+    <!-- MAIN TWO-PANEL CONTENT -->
+    <div class="row g-2 panel-container">
+        
+        <!-- LEFT PANEL: Category Tabs, Search, Veg/Nonveg, Menu Catalog -->
+        <div class="col-lg-7">
+            <div class="menu-panel p-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                    <!-- Search Box -->
+                    <div class="input-group input-group-sm" style="max-width: 260px;">
+                        <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                        <input type="text" id="catalogSearch" class="form-control border-start-0" placeholder="Search dish..." onkeyup="filterMenuCatalog()" />
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold fs-6" id="cartCount">0 Items</span>
-                        <button class="btn btn-outline-danger btn-sm rounded-pill px-2" onclick="clearCart()" title="Clear order cart">
-                            <i class="fa-solid fa-trash-can"></i>
+
+                    <!-- Veg / Non-Veg Filters -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-secondary active veg-pill px-2" onclick="filterVeg('all', this)">All</button>
+                        <button class="btn btn-outline-success veg-pill px-2" onclick="filterVeg('veg', this)">
+                            <span class="veg-indicator"><span class="veg-dot"></span></span> Veg
+                        </button>
+                        <button class="btn btn-outline-danger veg-pill px-2" onclick="filterVeg('nonveg', this)">
+                            <span class="nonveg-indicator"><span class="nonveg-dot"></span></span> Non-Veg
                         </button>
                     </div>
                 </div>
 
-                <!-- Items Cart List -->
-                <div id="cartItemsList" style="max-height: 38vh; overflow-y: auto;" class="pe-1 mb-2">
-                    <div class="text-center text-muted py-5" id="emptyCartMsg">
-                        <i class="fa-solid fa-basket-shopping fs-1 mb-2 text-success opacity-50"></i>
-                        <p class="small mb-0 fw-semibold text-dark">Your cart is empty.</p>
-                        <span class="small text-muted">Click "+ Add" on any menu item from the list to add to order.</span>
+                <!-- Category Tabs (Horizontal Pills) -->
+                <div class="d-flex gap-1 overflow-auto pb-2 mb-2" style="white-space: nowrap;">
+                    <button class="btn btn-sm btn-primary rounded-pill px-3 cat-btn active" onclick="filterCategory(0, this)">
+                        All (@menuItems.Count())
+                    </button>
+                    @foreach (var cat in categories)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 cat-btn" onclick="filterCategory(@cat.Id, this)">
+                            @cat.Name (@cat.ItemCount)
+                        </button>
+                    }
+                </div>
+
+                <!-- Menu Items List -->
+                <div class="list-group list-group-flush" id="menuCatalogList" style="max-height: calc(100% - 95px); overflow-y: auto;">
+                    @foreach (var item in menuItems)
+                    {
+                        var hasVariants = item.Variants != null && item.Variants.Any();
+                        var hasAddOns = item.AddOns != null && item.AddOns.Any();
+                        var hasChoices = hasVariants || hasAddOns;
+
+                        <div class="list-group-item list-group-item-action menu-item-row p-2 d-flex align-items-center justify-content-between border-bottom"
+                             data-cat="@item.CategoryId" data-veg="@(item.IsVeg ? "veg" : "nonveg")" data-name="@item.Name.ToLower()"
+                             onclick="onMenuItemClicked(@item.Id, '@item.Name', @item.Price, @(hasChoices.ToString().ToLower()), @(item.IsAvailable.ToString().ToLower()))">
+                            
+                            <div class="d-flex align-items-center" style="min-width: 0; flex: 1;">
+                                @if (item.IsVeg)
+                                {
+                                    <span class="veg-indicator"><span class="veg-dot"></span></span>
+                                }
+                                else
+                                {
+                                    <span class="nonveg-indicator"><span class="nonveg-dot"></span></span>
+                                }
+                                <div class="ms-1" style="min-width: 0;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold text-dark text-truncate">@item.Name</span>
+                                        <span class="badge bg-light text-secondary border small">@item.CategoryName</span>
+                                        @if (!item.IsAvailable)
+                                        {
+                                            <span class="badge bg-danger rounded-pill small">Sold Out</span>
+                                        }
+                                        @if (hasChoices)
+                                        {
+                                            <span class="badge bg-info-subtle text-info border small"><i class="fa-solid fa-sliders me-1"></i>Options</span>
+                                        }
+                                    </div>
+                                    <div class="small text-muted text-truncate" style="font-size: 0.75rem;">@item.Description</div>
+                                </div>
+                            </div>
+
+                            <div class="text-end ms-2">
+                                <span class="fw-bold text-success fs-6">₹@item.Price.ToString("N0")</span>
+                                @if (item.IsAvailable)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0 ms-2" title="Add to Section B">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: Section A (Sent to Kitchen) & Section B (New Items) + Sticky Footer -->
+        <div class="col-lg-5">
+            <div class="order-panel">
+                <div class="order-scroll-area">
+                    
+                    <!-- SECTION A: SENT TO KITCHEN (LOCKED ROWS WITH ⋯ MENU) -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-secondary text-uppercase small" style="letter-spacing: 0.5px;">
+                                <i class="fa-solid fa-fire text-danger me-1"></i>Section A: Sent to Kitchen
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill small" id="sectionACount">0 Sent</span>
+                        </div>
+                        <div id="sectionAList" class="border rounded-3 p-1 bg-light">
+                            <!-- Populated dynamically via JS -->
+                            <div class="text-center py-3 text-muted small" id="sectionAEmpty">
+                                <i class="fa-solid fa-utensils mb-1"></i><br />No items sent to kitchen yet.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION B: NEW ITEMS (NOT SENT - EDITABLE ROWS, STEPPERS, NOTES, REMOVE) -->
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-primary text-uppercase small" style="letter-spacing: 0.5px;">
+                                <i class="fa-solid fa-plus-circle text-primary me-1"></i>Section B: New Items (Not Sent)
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill small" id="sectionBCount">0 Items</span>
+                        </div>
+                        <div id="sectionBList">
+                            <!-- Populated dynamically via JS -->
+                            <div class="text-center py-4 text-muted small border rounded-3 bg-light" id="sectionBEmpty">
+                                <i class="fa-solid fa-cart-shopping fs-4 text-secondary opacity-50 mb-1"></i><br />
+                                Tap any dish on the left to add here.<br />
+                                <span class="text-secondary small">Customise with note chips or steppers before sending.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- 3.1 STICKY FOOTER: Totals, Send KOT, Bill -->
+                <div class="sticky-order-footer">
+                    <div class="row g-1 mb-2 small text-secondary">
+                        <div class="col-6 d-flex justify-content-between">
+                            <span>Subtotal:</span>
+                            <strong class="text-dark" id="displaySubtotal">₹0.00</strong>
+                        </div>
+                        <div class="col-6 d-flex justify-content-between">
+                            <span>CGST (2.5%):</span>
+                            <strong class="text-dark" id="displayCGST">₹0.00</strong>
+                        </div>
+                        <div class="col-6 d-flex justify-content-between">
+                            <span>SGST (2.5%):</span>
+                            <strong class="text-dark" id="displaySGST">₹0.00</strong>
+                        </div>
+                        <div class="col-6 d-flex justify-content-between">
+                            <span>Round-off:</span>
+                            <strong class="text-dark" id="displayRoundOff">₹0.00</strong>
+                        </div>
+                        <div class="col-12 border-top pt-1 mt-1 d-flex justify-content-between align-items-center fs-5 fw-bold text-dark">
+                            <span>Grand Total:</span>
+                            <span class="text-success" id="displayGrandTotal">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" onclick="autoSaveDraft(true)" title="Save draft without sending KOT">
+                            <i class="fa-solid fa-bookmark me-1"></i> Hold Draft
+                        </button>
+                        
+                        <!-- Send KOT / Update KOT Button -->
+                        <button class="btn btn-warning flex-grow-1 rounded-pill fw-bold text-dark shadow-sm d-flex align-items-center justify-content-center gap-2" id="sendKotBtn" onclick="onSendKOTClicked()">
+                            <i class="fa-solid fa-paper-plane text-danger"></i>
+                            <span id="sendKotBtnText">Send KOT</span>
+                        </button>
+
+                        <!-- Bill Button -->
+                        <button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" id="billBtn" onclick="openBillModal()">
+                            <i class="fa-solid fa-file-invoice-dollar me-1"></i> Bill
+                        </button>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <!-- Focused Billing & Submit Section -->
-            <div class="border-top pt-2">
-                <div class="mb-2">
-                    <input type="text" id="specialNotes" class="form-control form-control-sm" placeholder="Kitchen Notes (e.g. Less spicy, Extra napkins)..." />
+<!-- 5-SECOND UNDO TOAST (FR-OM-04) -->
+<div class="undo-toast" id="undoToastContainer" style="display: none;">
+    <div class="alert alert-dark shadow-lg d-flex justify-content-between align-items-center mb-0 rounded-4 py-2 px-3 border border-secondary">
+        <div>
+            <i class="fa-solid fa-rotate-left text-warning me-2"></i>
+            <span id="undoToastText">Item removed.</span>
+        </div>
+        <button class="btn btn-warning btn-sm rounded-pill px-3 py-1 fw-bold text-dark ms-3" onclick="undoRemoveItem()">
+            Undo
+        </button>
+    </div>
+</div>
+
+<!-- MODAL 1: INLINE CUSTOMIZATION (VARIANTS & ADD-ONS) (FR-OM-02) -->
+<div class="modal fade" id="customiseItemModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark" id="customiseModalTitle">Customise Dish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="custMenuItemId" />
+                <input type="hidden" id="custBasePrice" />
+
+                <!-- Variant Selection -->
+                <div id="variantSection" class="mb-3" style="display: none;">
+                    <label class="form-label fw-bold small text-secondary">Choose Variant:</label>
+                    <div id="variantOptions" class="d-flex flex-wrap gap-2"></div>
                 </div>
-                
-                <div class="bg-light p-2 rounded-3 mb-2 border">
-                    <div class="d-flex justify-content-between text-secondary mb-1 small">
-                        <span>Items Subtotal:</span>
-                        <span class="fw-bold text-dark" id="subtotalAmount">₹0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between text-secondary mb-1 small">
-                        <span>CGST (2.5%):</span>
-                        <span class="fw-bold text-dark" id="cgstAmount">₹0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between text-secondary mb-1 small">
-                        <span>SGST (2.5%):</span>
-                        <span class="fw-bold text-dark" id="sgstAmount">₹0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between fs-4 fw-bold text-dark border-top pt-1 mt-1">
-                        <span>Total Payable:</span>
-                        <span class="text-success" id="grandTotalAmount">₹0.00</span>
+
+                <!-- Add-Ons Selection -->
+                <div id="addOnSection" class="mb-3" style="display: none;">
+                    <label class="form-label fw-bold small text-secondary">Optional Add-ons:</label>
+                    <div id="addOnOptions" class="d-flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Course Tag (FR-OM-09) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Serve Course:</label>
+                    <div class="btn-group btn-group-sm w-100" role="group">
+                        <input type="radio" class="btn-check" name="custCourse" id="courseStarter" value="Starter">
+                        <label class="btn btn-outline-secondary" for="courseStarter">Starter First</label>
+
+                        <input type="radio" class="btn-check" name="custCourse" id="courseMain" value="Main" checked>
+                        <label class="btn btn-outline-secondary" for="courseMain">With Main</label>
+
+                        <input type="radio" class="btn-check" name="custCourse" id="courseDessert" value="Dessert">
+                        <label class="btn btn-outline-secondary" for="courseDessert">Dessert Later</label>
                     </div>
                 </div>
 
-                <!-- High-Focus CTA Button -->
-                <button class="btn btn-warning w-100 py-3 rounded-pill fw-bold text-dark fs-5 shadow-sm d-flex align-items-center justify-content-center gap-2" id="submitOrderBtn" onclick="submitPOSOrder()">
-                    <i class="fa-solid fa-fire text-danger"></i>
-                    <span>Confirm Order & Send KOT</span>
+                <!-- Special Note & Shortcuts (FR-OM-07) -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Quick Note Shortcuts:</label>
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        <span class="note-chip" onclick="appendCustNote('Less spicy')">Less spicy</span>
+                        <span class="note-chip" onclick="appendCustNote('No onion')">No onion</span>
+                        <span class="note-chip" onclick="appendCustNote('Extra spicy')">Extra spicy</span>
+                        <span class="note-chip" onclick="appendCustNote('Jain')">Jain</span>
+                        <span class="note-chip" onclick="appendCustNote('Pack separately')">Pack separately</span>
+                    </div>
+                    <input type="text" id="custSpecialNote" class="form-control form-control-sm" placeholder="Custom note (e.g. less butter)..." maxlength="100" />
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="confirmCustomisedItem()">
+                    Add to Order &bull; <span id="custComputedPrice">₹0</span>
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: REDUCE / CANCEL SENT ITEM (FR-OM-05, OM-B03/B04/B05) -->
+<div class="modal fade" id="reduceItemModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Reduce / Cancel Sent Item</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reduceOrderItemId" />
+                <p class="text-dark small mb-3">Item: <strong id="reduceItemName"></strong> &bull; Current Qty: <strong id="reduceItemCurrentQty"></strong></p>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Reduce by Quantity:</label>
+                    <input type="number" id="reduceQtyInput" class="form-control" value="1" min="1" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Reason for cancellation / reduction (mandatory):</label>
+                    <input type="text" id="reduceReasonInput" class="form-control" placeholder="e.g. Customer changed mind, delayed service..." />
+                </div>
+
+                <!-- Mode 3 "I have informed the kitchen" confirmation (FR-OM-05, OM-D05) -->
+                <div class="form-check p-3 bg-light rounded-3 border mb-3" id="informedKitchenCheckGroup">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="informedKitchenCheckbox" />
+                    <label class="form-check-label fw-bold small text-dark" for="informedKitchenCheckbox">
+                        I have informed the kitchen (Rule FR-OM-05)
+                    </label>
+                    <div class="small text-muted mt-1">Required because no automatic kitchen screen acknowledges this cancellation.</div>
+                </div>
+
+                <!-- Manager PIN Input -->
+                <div class="mb-2" id="managerPinGroup">
+                    <label class="form-label fw-bold small text-danger">Manager PIN (if required):</label>
+                    <input type="password" id="reduceManagerPin" class="form-control" placeholder="Enter PIN (default 1234)" />
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="submitReduceItem()">Confirm Reduction</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: NOTE CHANGE ON SENT ITEM (OM-B09, OM-B10) -->
+<div class="modal fade" id="changeNoteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark">Change Note on Sent Dish</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="changeNoteItemId" />
+                <p class="small text-muted mb-2">A "NOTE CHANGE" slip will be sent to the kitchen.</p>
+                <label class="form-label fw-bold small">New Special Instruction (max 100 chars):</label>
+                <input type="text" id="changeNoteInput" class="form-control" maxlength="100" placeholder="e.g. Make it extra spicy..." />
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" onclick="submitChangeNote()">Update Note</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: BILLING & PAYMENT (Worked Example Step 9 & 10) -->
+<div class="modal fade" id="billModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark"><i class="fa-solid fa-file-invoice-dollar text-success me-2"></i>Generate Bill & Settle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="bg-light p-3 rounded-3 mb-3 border">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary small">Total Payable:</span>
+                        <strong class="fs-4 text-success" id="modalBillGrandTotal">₹0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>Customer GSTIN (Optional):</span>
+                        <input type="text" id="billGstinInput" class="form-control form-control-sm text-uppercase" placeholder="15-character GSTIN" style="max-width: 180px;" />
+                    </div>
+                </div>
+
+                <!-- Payment Method / Split Payment (OM-H05) -->
+                <h6 class="fw-bold small text-dark mb-2">Select Payment Method:</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <button class="btn btn-outline-success w-100 py-2 fw-bold" onclick="settleBillFull(1)">
+                            <i class="fa-solid fa-money-bill-wave me-1"></i> Cash Full
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-outline-primary w-100 py-2 fw-bold" onclick="settleBillFull(2)">
+                            <i class="fa-solid fa-qrcode me-1"></i> UPI Full
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border rounded-3 p-2 bg-white">
+                    <span class="fw-bold small text-secondary">Split Payment (e.g. ₹500 Cash + ₹272 UPI):</span>
+                    <div class="input-group input-group-sm mt-1">
+                        <span class="input-group-text">Amount ₹</span>
+                        <input type="number" id="splitAmountInput" class="form-control" placeholder="Amount" />
+                        <select id="splitMethodSelect" class="form-select">
+                            <option value="1">Cash</option>
+                            <option value="2">UPI</option>
+                            <option value="3">Card</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="collectSplitPayment()">Add Payment</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -283,208 +593,760 @@
 
 @section Scripts {
 <script>
-    let cart = [];
+    // System Context
+    const CURRENT_KITCHEN_MODE = @((int)currentMode); // 1 = FullKDS, 2 = PrinterOnly, 3 = NoDevice
+    const TRACK_READY_STATUS = @(setting.TrackReadyStatus.ToString().ToLower());
+    let currentOrderId = @orderId;
+    let selectedTableId = @(selectedTableId.HasValue ? selectedTableId.Value.ToString() : "null");
+    let initialOrderData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(activeOrder ?? activeDraft));
 
-    // Sync Waiter Selection
-    function onWaiterChange() {
-        let val = $('#waiterInput').val();
-        let opt = $(`#waiterDataList option[value="${val}"]`);
-        if (opt.length) {
-            $('#selectedWaiterId').val(opt.data('id'));
+    // Section A (Sent to Kitchen items) and Section B (New unsent items)
+    let sectionAItems = [];
+    let sectionBItems = [];
+    let lastRemovedItem = null;
+    let undoTimeout = null;
+
+    $(document).ready(function() {
+        initOrderState();
+        startTimer();
+    });
+
+    function initOrderState() {
+        if (initialOrderData && initialOrderData.items) {
+            initialOrderData.items.forEach(item => {
+                if (item.status === 0) { // Pending -> Section B
+                    sectionBItems.push({
+                        id: item.id || 0,
+                        menuItemId: item.menuItemId,
+                        name: item.itemName,
+                        price: item.unitPrice,
+                        quantity: item.quantity,
+                        variantName: item.selectedVariantName || '',
+                        note: item.specialInstructions || '',
+                        course: item.course || 'Main',
+                        addOns: item.addOns || []
+                    });
+                } else if (item.status !== 5) { // Sent/Preparing/Ready/Served -> Section A
+                    sectionAItems.push(item);
+                }
+            });
         }
+        renderSectionA();
+        renderSectionB();
+        updateFooterTotals();
     }
 
-    function onOrderTypeChange() {
-        let orderType = $('input[name="orderTypeRadio"]:checked').val();
-        let targetText = "Dine-in Order";
-        if (orderType === "2") {
-            targetText = "Takeaway Order";
-            $('#tableSelectWrapper').hide();
-        } else if (orderType === "3") {
-            targetText = "Delivery Order";
-            $('#tableSelectWrapper').hide();
-        } else {
-            targetText = "Dine-in Order";
-            $('#tableSelectWrapper').show();
-        }
-        $('#orderTargetDesc').text(targetText);
-    }
+    // -------------------------------------------------------------
+    // SECTION A: SENT TO KITCHEN RENDERING
+    // -------------------------------------------------------------
+    function renderSectionA() {
+        let container = $('#sectionAList');
+        let countBadge = $('#sectionACount');
+        countBadge.text(sectionAItems.length + ' Sent');
 
-    function addToCart(id, name, price) {
-        let existing = cart.find(i => i.id === id);
-        if (existing) {
-            existing.qty += 1;
-        } else {
-            cart.push({ id: id, name: name, price: price, qty: 1, notes: "" });
-        }
-        renderCart();
-    }
-
-    function updateQty(id, change) {
-        let item = cart.find(i => i.id === id);
-        if (item) {
-            item.qty += change;
-            if (item.qty <= 0) {
-                cart = cart.filter(i => i.id !== id);
-            }
-        }
-        renderCart();
-    }
-
-    function clearCart() {
-        if (cart.length > 0 && confirm("Clear current order cart?")) {
-            cart = [];
-            renderCart();
-        }
-    }
-
-    function renderCart() {
-        let container = $('#cartItemsList');
-        if (cart.length === 0) {
+        if (sectionAItems.length === 0) {
+            $('#sendKotBtnText').text('Send KOT');
             container.html(`
-                <div class="text-center text-muted py-5" id="emptyCartMsg">
-                    <i class="fa-solid fa-basket-shopping fs-1 mb-2 text-success opacity-50"></i>
-                    <p class="small mb-0 fw-semibold text-dark">Your cart is empty.</p>
-                    <span class="small text-muted">Click "+ Add" on any menu item from the list to add to order.</span>
+                <div class="text-center py-3 text-muted small" id="sectionAEmpty">
+                    <i class="fa-solid fa-utensils mb-1"></i><br />No items sent to kitchen yet.
                 </div>
             `);
-            $('#cartCount').text('0 Items');
-            $('#subtotalAmount').text('₹0.00');
-            $('#cgstAmount').text('₹0.00');
-            $('#sgstAmount').text('₹0.00');
-            $('#grandTotalAmount').text('₹0.00');
             return;
         }
 
-        let html = '';
-        let subtotal = 0;
-        let totalQty = 0;
+        $('#sendKotBtnText').text('Update KOT (Add to Order)');
 
-        cart.forEach(item => {
-            let itemTotal = item.price * item.qty;
-            subtotal += itemTotal;
-            totalQty += item.qty;
+        let html = '';
+        sectionAItems.forEach(item => {
+            let statusText = getStatusText(item.status);
+            let statusColor = getStatusColor(item.status);
+            let timeStr = item.sentAt ? new Date(item.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
             html += `
-                <div class="p-2 mb-2 bg-white rounded-3 border d-flex justify-content-between align-items-center shadow-sm">
+                <div class="p-2 mb-1 bg-white rounded-2 border d-flex justify-content-between align-items-center shadow-xs">
                     <div style="flex: 1; min-width: 0;">
-                        <div class="fw-bold text-dark small text-truncate">${item.name}</div>
-                        <div class="text-muted small">₹${item.price} &times; ${item.qty} = <strong class="text-success">₹${itemTotal}</strong></div>
+                        <div class="d-flex align-items-center gap-1">
+                            <span class="badge bg-secondary-subtle text-dark border small fw-bold">${item.quantity}x</span>
+                            <span class="fw-bold text-dark small text-truncate">${item.itemName} ${item.selectedVariantName ? '(' + item.selectedVariantName + ')' : ''}</span>
+                        </div>
+                        <div class="small text-muted" style="font-size: 0.7rem;">
+                            <span class="badge ${statusColor} status-chip py-0">${statusText}</span>
+                            ${timeStr ? `&bull; ${timeStr}` : ''}
+                            ${item.specialInstructions ? `&bull; <span class="text-info">${item.specialInstructions}</span>` : ''}
+                        </div>
                     </div>
-                    <div class="d-flex align-items-center gap-1 ms-2">
-                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateQty(${item.id}, -1)">
-                            <i class="fa-solid fa-minus" style="font-size: 0.65rem;"></i>
-                        </button>
-                        <span class="fw-bold text-dark px-2">${item.qty}</span>
-                        <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateQty(${item.id}, 1)">
-                            <i class="fa-solid fa-plus" style="font-size: 0.65rem;"></i>
-                        </button>
-                        <button class="btn btn-link text-danger p-0 ms-1" onclick="updateQty(${item.id}, -${item.qty})" title="Remove">
-                            <i class="fa-solid fa-trash-can small"></i>
-                        </button>
+                    <div class="d-flex align-items-center gap-2 ms-2">
+                        <span class="fw-bold text-dark small">₹${(item.totalPrice || (item.unitPrice * item.quantity)).toFixed(2)}</span>
+                        
+                        <!-- Allowed Actions "⋯" Dropdown (Section 3.3) -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="fa-solid fa-ellipsis-vertical fs-6"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item small" href="javascript:void(0)" onclick="repeatSentItem(${item.menuItemId}, '${item.itemName}', ${item.unitPrice})"><i class="fa-solid fa-plus text-primary me-2"></i>Repeat One More (FR-OM-06)</a></li>
+                                <li><a class="dropdown-item small text-danger" href="javascript:void(0)" onclick="openReduceModal(${item.id}, '${item.itemName}', ${item.quantity}, ${item.status})"><i class="fa-solid fa-minus me-2"></i>Reduce / Cancel</a></li>
+                                ${item.status === 1 ? `<li><a class="dropdown-item small" href="javascript:void(0)" onclick="openChangeNoteModal(${item.id}, '${item.specialInstructions || ''}')"><i class="fa-solid fa-pen text-info me-2"></i>Change Note (OM-B09)</a></li>` : ''}
+                                ${(CURRENT_KITCHEN_MODE <= 2 && item.status !== 4) ? `<li><a class="dropdown-item small text-warning" href="javascript:void(0)" onclick="markItemStatus(${item.id}, 3)"><i class="fa-solid fa-bell me-2"></i>Mark Ready</a></li>` : ''}
+                                ${item.status !== 4 ? `<li><a class="dropdown-item small text-success" href="javascript:void(0)" onclick="markItemStatus(${item.id}, 4)"><i class="fa-solid fa-check-double me-2"></i>Mark Served</a></li>` : ''}
+                            </ul>
+                        </div>
                     </div>
                 </div>
             `;
         });
-
         container.html(html);
-        $('#cartCount').text(totalQty + ' Items');
-
-        let cgst = subtotal * 0.025;
-        let sgst = subtotal * 0.025;
-        let total = Math.round(subtotal + cgst + sgst);
-
-        $('#subtotalAmount').text('₹' + subtotal.toFixed(2));
-        $('#cgstAmount').text('₹' + cgst.toFixed(2));
-        $('#sgstAmount').text('₹' + sgst.toFixed(2));
-        $('#grandTotalAmount').text('₹' + total.toFixed(2));
     }
 
-    function filterCategory(catId, btn) {
-        $('.cat-btn').removeClass('btn-primary active').addClass('btn-outline-secondary');
-        $(btn).removeClass('btn-outline-secondary').addClass('btn-primary active');
-
-        if (catId === 0) {
-            $('.menu-list-row').show();
-        } else {
-            $('.menu-list-row').hide();
-            $(`.menu-list-row[data-cat="${catId}"]`).show();
+    function getStatusText(status) {
+        switch(status) {
+            case 1: return "Sent";
+            case 2: return "Preparing";
+            case 3: return "Ready";
+            case 4: return "Served";
+            case 5: return "Cancelled";
+            default: return "Pending";
         }
     }
 
-    function filterVeg(type, btn) {
-        $('.veg-filter-btn').removeClass('active');
-        $(btn).addClass('active');
-
-        if (type === 'all') $('.menu-list-row').show();
-        else {
-            $('.menu-list-row').hide();
-            $(`.menu-list-row[data-veg="${type}"]`).show();
+    function getStatusColor(status) {
+        switch(status) {
+            case 1: return "bg-primary-subtle text-primary border border-primary-subtle";
+            case 2: return "bg-warning-subtle text-warning border border-warning-subtle";
+            case 3: return "bg-info-subtle text-info border border-info-subtle";
+            case 4: return "bg-success-subtle text-success border border-success-subtle";
+            case 5: return "bg-danger-subtle text-danger border border-danger-subtle";
+            default: return "bg-secondary-subtle text-secondary";
         }
     }
 
-    function filterMenu() {
-        let query = $('#menuSearch').val().toLowerCase();
-        $('.menu-list-row').each(function() {
-            let name = $(this).data('name');
-            if (name.includes(query)) $(this).show();
-            else $(this).hide();
+    // -------------------------------------------------------------
+    // SECTION B: NEW ITEMS RENDERING
+    // -------------------------------------------------------------
+    function renderSectionB() {
+        let container = $('#sectionBList');
+        let countBadge = $('#sectionBCount');
+        countBadge.text(sectionBItems.length + ' Items');
+
+        if (sectionBItems.length === 0) {
+            container.html(`
+                <div class="text-center py-4 text-muted small border rounded-3 bg-light" id="sectionBEmpty">
+                    <i class="fa-solid fa-cart-shopping fs-4 text-secondary opacity-50 mb-1"></i><br />
+                    Tap any dish on the left to add here.<br />
+                    <span class="text-secondary small">Customise with note chips or steppers before sending.</span>
+                </div>
+            `);
+            $('#sendKotBtn').prop('disabled', true);
+            return;
+        }
+
+        $('#sendKotBtn').prop('disabled', false);
+
+        let html = '';
+        sectionBItems.forEach((item, index) => {
+            html += `
+                <div class="p-2 mb-2 bg-white rounded-3 border shadow-xs">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div style="flex: 1; min-width: 0;">
+                            <span class="fw-bold text-dark small">${item.name}</span>
+                            ${item.variantName ? `<span class="badge bg-light text-secondary border small ms-1">${item.variantName}</span>` : ''}
+                            <span class="badge bg-secondary-subtle text-secondary small ms-1">${item.course}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            <!-- Stepper (FR-OM-03) -->
+                            <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateSectionBQty(${index}, -1)">-</button>
+                            <span class="fw-bold px-1 small">${item.quantity}</span>
+                            <button class="btn btn-outline-secondary btn-sm px-2 py-0 rounded-circle" onclick="updateSectionBQty(${index}, 1)">+</button>
+                            <button class="btn btn-link text-danger p-0 ms-2" onclick="removeSectionBItem(${index})" title="Remove item">
+                                <i class="fa-solid fa-trash-can small"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Note Shortcuts (FR-OM-07) -->
+                    <div class="d-flex flex-wrap gap-1 align-items-center mt-1">
+                        <span class="note-chip" onclick="setSectionBNote(${index}, 'Less spicy')">Less spicy</span>
+                        <span class="note-chip" onclick="setSectionBNote(${index}, 'No onion')">No onion</span>
+                        <span class="note-chip" onclick="setSectionBNote(${index}, 'Extra spicy')">Extra spicy</span>
+                        <span class="note-chip" onclick="setSectionBNote(${index}, 'Jain')">Jain</span>
+                        <input type="text" class="form-control form-control-sm py-0 px-1 border-0 bg-light" style="width: 140px; font-size: 0.725rem;" 
+                               placeholder="Add note..." maxlength="100" value="${item.note || ''}" onchange="updateSectionBNoteText(${index}, this.value)" />
+                    </div>
+                </div>
+            `;
         });
+        container.html(html);
     }
 
-    function submitPOSOrder() {
-        if (cart.length === 0) {
-            alert("Cart is empty! Please click '+ Add' on items to create an order.");
+    function updateSectionBQty(index, delta) {
+        sectionBItems[index].quantity += delta;
+        if (sectionBItems[index].quantity <= 0) {
+            removeSectionBItem(index);
+            return;
+        }
+        renderSectionB();
+        updateFooterTotals();
+        autoSaveDraft();
+    }
+
+    function removeSectionBItem(index) {
+        lastRemovedItem = { item: sectionBItems[index], index: index };
+        sectionBItems.splice(index, 1);
+        renderSectionB();
+        updateFooterTotals();
+        autoSaveDraft();
+
+        // Show 5-second Undo Toast (FR-OM-04)
+        $('#undoToastText').text(`"${lastRemovedItem.item.name}" removed.`);
+        $('#undoToastContainer').fadeIn();
+        if (undoTimeout) clearTimeout(undoTimeout);
+        undoTimeout = setTimeout(() => {
+            $('#undoToastContainer').fadeOut();
+            lastRemovedItem = null;
+        }, 5000);
+    }
+
+    function undoRemoveItem() {
+        if (lastRemovedItem) {
+            sectionBItems.splice(lastRemovedItem.index, 0, lastRemovedItem.item);
+            $('#undoToastContainer').fadeOut();
+            lastRemovedItem = null;
+            renderSectionB();
+            updateFooterTotals();
+            autoSaveDraft();
+        }
+    }
+
+    function setSectionBNote(index, note) {
+        sectionBItems[index].note = note;
+        renderSectionB();
+        autoSaveDraft();
+    }
+
+    function updateSectionBNoteText(index, text) {
+        sectionBItems[index].note = text;
+        autoSaveDraft();
+    }
+
+    function repeatSentItem(menuItemId, name, price) {
+        // FR-OM-06: Repeat adds item again to Section B in one tap
+        sectionBItems.push({
+            id: 0,
+            menuItemId: menuItemId,
+            name: name,
+            price: price,
+            quantity: 1,
+            variantName: '',
+            note: '',
+            course: 'Main',
+            addOns: []
+        });
+        renderSectionB();
+        updateFooterTotals();
+        autoSaveDraft();
+    }
+
+    // -------------------------------------------------------------
+    // INLINE MENU CLICK HANDLER (FR-OM-02)
+    // -------------------------------------------------------------
+    function onMenuItemClicked(id, name, price, hasChoices, isAvailable) {
+        if (!isAvailable) {
+            alert(`"${name}" is currently sold out (OM-A12).`);
             return;
         }
 
-        let orderType = parseInt($('input[name="orderTypeRadio"]:checked').val());
-        let tableId = $('#tableSelect').val();
-        
-        if (orderType === 1 && !tableId) {
-            alert("Please select an assigned dining table for Dine-in orders.");
-            $('#tableSelect').focus();
+        if (hasChoices) {
+            // Open inline customization modal sheet
+            $('#custMenuItemId').val(id);
+            $('#custBasePrice').val(price);
+            $('#customiseModalTitle').text(`Customise: ${name}`);
+            $('#custSpecialNote').val('');
+            $('#custComputedPrice').text(`₹${price}`);
+            
+            // Fetch item details for variants & add-ons
+            $.get(`/Masters/GetMenuItemDetails?id=${id}`, function(res) {
+                if (res && res.variants && res.variants.length > 0) {
+                    let vHtml = '';
+                    res.variants.forEach((v, idx) => {
+                        vHtml += `
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="custVariantRadio" id="var_${v.id}" value="${v.variantName}" data-price="${v.price}" ${idx === 0 ? 'checked' : ''} onchange="updateCustComputedPrice()">
+                                <label class="form-check-label small" for="var_${v.id}">${v.variantName} (₹${v.price})</label>
+                            </div>
+                        `;
+                    });
+                    $('#variantOptions').html(vHtml);
+                    $('#variantSection').show();
+                } else {
+                    $('#variantSection').hide();
+                }
+                $('#customiseItemModal').modal('show');
+            }).fail(function() {
+                // Direct fallback if extra details endpoint not present
+                addDirectToSectionB(id, name, price);
+            });
+        } else {
+            // Immediate add to Section B (FR-OM-02)
+            addDirectToSectionB(id, name, price);
+        }
+    }
+
+    function addDirectToSectionB(id, name, price) {
+        let existing = sectionBItems.find(i => i.menuItemId === id && !i.variantName);
+        if (existing) {
+            existing.quantity += 1;
+        } else {
+            sectionBItems.push({
+                id: 0,
+                menuItemId: id,
+                name: name,
+                price: price,
+                quantity: 1,
+                variantName: '',
+                note: '',
+                course: 'Main',
+                addOns: []
+            });
+        }
+        renderSectionB();
+        updateFooterTotals();
+        autoSaveDraft();
+    }
+
+    function confirmCustomisedItem() {
+        let id = parseInt($('#custMenuItemId').val());
+        let basePrice = parseFloat($('#custBasePrice').val());
+        let variantRadio = $('input[name="custVariantRadio"]:checked');
+        let variantName = variantRadio.length ? variantRadio.val() : '';
+        let price = variantRadio.length ? parseFloat(variantRadio.data('price')) : basePrice;
+        let course = $('input[name="custCourse"]:checked').val() || 'Main';
+        let note = $('#custSpecialNote').val();
+        let itemName = $('#customiseModalTitle').text().replace('Customise: ', '');
+
+        sectionBItems.push({
+            id: 0,
+            menuItemId: id,
+            name: itemName,
+            price: price,
+            quantity: 1,
+            variantName: variantName,
+            note: note,
+            course: course,
+            addOns: []
+        });
+
+        $('#customiseItemModal').modal('hide');
+        renderSectionB();
+        updateFooterTotals();
+        autoSaveDraft();
+    }
+
+    function appendCustNote(chip) {
+        let cur = $('#custSpecialNote').val();
+        $('#custSpecialNote').val(cur ? cur + ', ' + chip : chip);
+    }
+
+    // -------------------------------------------------------------
+    // TOTALS CALCULATION
+    // -------------------------------------------------------------
+    function updateFooterTotals() {
+        let subtotal = 0;
+        sectionAItems.forEach(i => subtotal += (i.totalPrice || (i.unitPrice * i.quantity)));
+        sectionBItems.forEach(i => subtotal += (i.price * i.quantity));
+
+        // 5% GST (2.5% CGST + 2.5% SGST)
+        let totalTax = Math.round(subtotal * 0.05 * 100) / 100;
+        let cgst = Math.round(subtotal * 0.025 * 100) / 100;
+        let sgst = Math.round((totalTax - cgst) * 100) / 100;
+
+        let gross = subtotal + totalTax;
+        let grandTotal = Math.round(gross);
+        let roundOff = Math.round((grandTotal - gross) * 100) / 100;
+
+        $('#displaySubtotal').text('₹' + subtotal.toFixed(2));
+        $('#displayCGST').text('₹' + cgst.toFixed(2));
+        $('#displaySGST').text('₹' + sgst.toFixed(2));
+        $('#displayRoundOff').text((roundOff >= 0 ? '+' : '') + '₹' + roundOff.toFixed(2));
+        $('#displayGrandTotal').text('₹' + grandTotal.toFixed(2));
+        $('#modalBillGrandTotal').text('₹' + grandTotal.toFixed(2));
+    }
+
+    // -------------------------------------------------------------
+    // DRAFT AUTO-SAVE (FR-OM-10)
+    // -------------------------------------------------------------
+    function autoSaveDraft(isManualHold = false) {
+        if (!selectedTableId && !currentOrderId) return;
+
+        // If this order is ALREADY an active confirmed order, do not create duplicate drafts in DB!
+        let isConfirmedOrder = currentOrderId > 0 && !@(isDraft.ToString().ToLower());
+        if (isConfirmedOrder) {
+            if (isManualHold) {
+                alert("New items held in Section B. Click 'Update KOT' when ready to send to kitchen.");
+            }
             return;
         }
 
-        let waiterId = parseInt($('#selectedWaiterId').val()) || null;
-        let submitBtn = $('#submitOrderBtn');
-        submitBtn.prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Sending KOT...');
+        let mappedItems = sectionBItems.map(i => ({
+            menuItemId: i.menuItemId,
+            quantity: i.quantity,
+            selectedVariantName: i.variantName,
+            specialInstructions: i.note,
+            course: i.course
+        }));
 
-        let dto = {
-            orderType: orderType,
-            tableId: (orderType === 1 && tableId) ? parseInt(tableId) : null,
-            waiterId: waiterId,
-            customerName: $('#customerName').val() || "Guest",
-            customerPhone: $('#customerPhone').val() || "",
-            specialInstructions: $('#specialNotes').val() || "",
-            items: cart.map(i => ({ menuItemId: i.id, quantity: i.qty, specialInstructions: i.notes || "" }))
+        let payload = {
+            orderId: currentOrderId > 0 ? currentOrderId : null,
+            tableId: selectedTableId ? parseInt(selectedTableId) : null,
+            covers: parseInt($('#coversInput').val()) || 2,
+            orderNote: $('#orderNoteInput').val(),
+            userName: $('#waiterInput').val(),
+            items: mappedItems
         };
 
         $.ajax({
-            url: '/Orders/CreatePOSOrder',
+            url: '/Orders/SaveDraft',
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify(dto),
+            data: JSON.stringify(payload),
             success: function(res) {
-                if (res.success) {
-                    alert('Order #' + res.orderNumber + ' Created! KOT dispatched to Kitchen.');
-                    window.location.href = '/Kitchen';
-                } else {
-                    alert('Error: ' + res.message);
-                    submitBtn.prop('disabled', false).html('<i class="fa-solid fa-fire text-danger"></i> Confirm Order & Send KOT');
+                if (res.success && res.draftId) {
+                    currentOrderId = res.draftId;
+                    if (isManualHold) {
+                        alert("Order saved as Draft. Table remains Available until Send KOT.");
+                    }
                 }
-            },
-            error: function(err) {
-                alert('Server error creating order.');
-                submitBtn.prop('disabled', false).html('<i class="fa-solid fa-fire text-danger"></i> Confirm Order & Send KOT');
             }
         });
     }
 
-    $(document).ready(function() {
-        onOrderTypeChange();
-        onWaiterChange();
-    });
+    // -------------------------------------------------------------
+    // SEND KOT / UPDATE KOT (FR-ORD-11, OM-B01)
+    // -------------------------------------------------------------
+    function onSendKOTClicked() {
+        if (sectionBItems.length === 0) {
+            alert("Send KOT is disabled when Section B is empty (FR-ORD-11, OM-A16).");
+            return;
+        }
+
+        let covers = parseInt($('#coversInput').val()) || 2;
+        let tableCap = @tableCapacity;
+        if (covers > tableCap) {
+            alert(`Covers (${covers}) cannot exceed table capacity (${tableCap}) (OM-A10).`);
+            return;
+        }
+
+        let mappedItems = sectionBItems.map(i => ({
+            menuItemId: i.menuItemId,
+            quantity: i.quantity,
+            selectedVariantName: i.variantName,
+            specialInstructions: i.note,
+            course: i.course
+        }));
+
+        let payload = {
+            orderId: currentOrderId > 0 ? currentOrderId : 0,
+            tableId: selectedTableId ? parseInt(selectedTableId) : null,
+            covers: covers,
+            orderNote: $('#orderNoteInput').val(),
+            waiterName: $('#waiterInput').val(),
+            newItems: mappedItems,
+            items: mappedItems
+        };
+
+        $('#sendKotBtn').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin"></i> Sending...');
+
+        $.ajax({
+            url: '/Orders/SendKOT',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (res.success) {
+                    let targetOrderId = res.orderId || (res.order ? res.order.id : currentOrderId);
+                    alert(`KOT generated successfully: ${res.kotNumber}`);
+                    if (selectedTableId) {
+                        window.location.href = `/Orders/POS?tableId=${selectedTableId}&orderId=${targetOrderId}&returnUrl=@returnUrl`;
+                    } else {
+                        window.location.href = `/Orders/POS?orderId=${targetOrderId}&returnUrl=@returnUrl`;
+                    }
+                } else {
+                    alert(res.message || "Failed to send KOT");
+                    $('#sendKotBtn').prop('disabled', false).html('<i class="fa-solid fa-paper-plane text-danger"></i> Send KOT');
+                }
+            },
+            error: function() {
+                alert("Network or server error while sending KOT.");
+                $('#sendKotBtn').prop('disabled', false).html('<i class="fa-solid fa-paper-plane text-danger"></i> Send KOT');
+            }
+        });
+    }
+
+    // -------------------------------------------------------------
+    // REDUCE / CANCEL ITEM MODAL & ACTIONS
+    // -------------------------------------------------------------
+    function openReduceModal(itemId, itemName, currentQty, status) {
+        $('#reduceOrderItemId').val(itemId);
+        $('#reduceItemName').text(itemName);
+        $('#reduceItemCurrentQty').text(currentQty);
+        $('#reduceQtyInput').val(1).attr('max', currentQty);
+        $('#reduceReasonInput').val('');
+        $('#informedKitchenCheckbox').prop('checked', false);
+        $('#reduceManagerPin').val('');
+
+        // Show "Informed Kitchen" checkbox for Mode 3 or when food might be cooking
+        if (CURRENT_KITCHEN_MODE === 3) {
+            $('#informedKitchenCheckGroup').show();
+        } else {
+            $('#informedKitchenCheckGroup').hide();
+        }
+
+        // Show Manager PIN if Preparing, Ready, or Served
+        if (status >= 2) {
+            $('#managerPinGroup').show();
+        } else {
+            $('#managerPinGroup').show(); // setting dependent
+        }
+
+        $('#reduceItemModal').modal('show');
+    }
+
+    function submitReduceItem() {
+        let itemId = parseInt($('#reduceOrderItemId').val());
+        let qty = parseInt($('#reduceQtyInput').val());
+        let reason = $('#reduceReasonInput').val();
+        let informed = $('#informedKitchenCheckbox').is(':checked');
+        let pin = $('#reduceManagerPin').val();
+
+        if (!reason || reason.trim().length === 0) {
+            alert("A reason is mandatory for item reduction or cancellation.");
+            return;
+        }
+
+        if (CURRENT_KITCHEN_MODE === 3 && !informed) {
+            alert("You must tick 'I have informed the kitchen' before cancellation is accepted (FR-OM-05, OM-D05).");
+            return;
+        }
+
+        let payload = {
+            orderId: currentOrderId,
+            orderItemId: itemId,
+            reduceByQuantity: qty,
+            reason: reason,
+            informedKitchen: informed,
+            managerPin: pin
+        };
+
+        $.ajax({
+            url: '/Orders/ReduceItem',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (res.success) {
+                    $('#reduceItemModal').modal('hide');
+                    alert("Item reduced. Cancel slip printed.");
+                    window.location.reload();
+                } else {
+                    alert(res.message || "Reduction rejected.");
+                }
+            }
+        });
+    }
+
+    // -------------------------------------------------------------
+    // NOTE CHANGE ON SENT ITEM (OM-B09)
+    // -------------------------------------------------------------
+    function openChangeNoteModal(itemId, currentNote) {
+        $('#changeNoteItemId').val(itemId);
+        $('#changeNoteInput').val(currentNote);
+        $('#changeNoteModal').modal('show');
+    }
+
+    function submitChangeNote() {
+        let itemId = parseInt($('#changeNoteItemId').val());
+        let newNote = $('#changeNoteInput').val();
+
+        $.ajax({
+            url: '/Orders/ChangeItemNote',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                orderId: currentOrderId,
+                orderItemId: itemId,
+                newNote: newNote
+            }),
+            success: function(res) {
+                if (res.success) {
+                    $('#changeNoteModal').modal('hide');
+                    alert("Note changed. NOTE CHANGE slip generated.");
+                    window.location.reload();
+                } else {
+                    alert(res.message || "Failed to change note.");
+                }
+            }
+        });
+    }
+
+    function markItemStatus(itemId, newStatus) {
+        $.ajax({
+            url: '/Orders/UpdateItemStatus',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                orderId: currentOrderId,
+                orderItemId: itemId,
+                status: newStatus
+            }),
+            success: function(res) {
+                if (res.success) {
+                    window.location.reload();
+                } else {
+                    alert(res.message);
+                }
+            }
+        });
+    }
+
+    // -------------------------------------------------------------
+    // BILLING & SETTLEMENT MODAL
+    // -------------------------------------------------------------
+    function openBillModal() {
+        if (!currentOrderId) {
+            alert("No confirmed order to bill.");
+            return;
+        }
+        $('#billModal').modal('show');
+    }
+
+    function settleBillFull(methodId) {
+        let gstin = $('#billGstinInput').val();
+        $.ajax({
+            url: '/Orders/GenerateBillFromPOS',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                orderId: currentOrderId,
+                customerGstin: gstin
+            }),
+            success: function(res) {
+                if (res.success) {
+                    // Collect Full Payment
+                    let billId = res.bill.id;
+                    let amount = res.bill.grandTotal;
+                    $.ajax({
+                        url: '/Billing/CollectPayment',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            billId: billId,
+                            amount: amount,
+                            paymentMethod: methodId
+                        }),
+                        success: function() {
+                            alert("Bill settled in full! Table is now available.");
+                            window.location.href = '@returnUrl';
+                        }
+                    });
+                } else {
+                    alert(res.message || "Billing rejected.");
+                }
+            }
+        });
+    }
+
+    function collectSplitPayment() {
+        let amt = parseFloat($('#splitAmountInput').val());
+        let method = parseInt($('#splitMethodSelect').val());
+        if (!amt || amt <= 0) {
+            alert("Enter valid split payment amount.");
+            return;
+        }
+
+        $.ajax({
+            url: '/Orders/GenerateBillFromPOS',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ orderId: currentOrderId }),
+            success: function(res) {
+                if (res.success) {
+                    $.ajax({
+                        url: '/Billing/CollectPayment',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            billId: res.bill.id,
+                            amount: amt,
+                            paymentMethod: method
+                        }),
+                        success: function(pRes) {
+                            if (pRes.isPaid) {
+                                alert("Order fully paid! Table is now available.");
+                                window.location.href = '@returnUrl';
+                            } else {
+                                alert(`Payment of ₹${amt} collected. Remaining balance: ₹${pRes.balanceAmount}`);
+                                $('#splitAmountInput').val('');
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    function showEstimateSlip() {
+        alert("Estimate Slip (OM-A22):\nTable: @(selectedTable?.TableNumber ?? "NA")\nSubtotal: " + $('#displaySubtotal').text() + "\nTax: " + $('#displayCGST').text() + " + " + $('#displaySGST').text() + "\nPayable: " + $('#displayGrandTotal').text() + "\n* Unofficial Estimate Slip *");
+    }
+
+    function showCounterKOTSlip() {
+        let text = "KOT SLIP (Counter Copy)\nTable: @(selectedTable?.TableNumber ?? "NA")\nItems:\n";
+        sectionAItems.forEach(i => text += `${i.quantity}x ${i.itemName}\n`);
+        alert(text);
+    }
+
+    function filterMenuCatalog() {
+        let q = $('#catalogSearch').val().toLowerCase();
+        $('.menu-item-row').each(function() {
+            let name = $(this).data('name') || '';
+            $(this).toggle(name.includes(q));
+        });
+    }
+
+    function filterVeg(type, btn) {
+        $('.veg-pill').removeClass('active');
+        $(btn).addClass('active');
+        $('.menu-item-row').each(function() {
+            let v = $(this).data('veg');
+            if (type === 'all') $(this).show();
+            else $(this).toggle(v === type);
+        });
+    }
+
+    function filterCategory(catId, btn) {
+        $('.cat-btn').removeClass('active btn-primary').addClass('btn-outline-secondary');
+        $(btn).removeClass('btn-outline-secondary').addClass('active btn-primary');
+        $('.menu-item-row').each(function() {
+            let c = parseInt($(this).data('cat'));
+            if (catId === 0) $(this).show();
+            else $(this).toggle(c === catId);
+        });
+    }
+
+    function onCoversChange() {
+        let covers = parseInt($('#coversInput').val());
+        let cap = @tableCapacity;
+        if (covers > cap) {
+            alert(`Covers (${covers}) cannot exceed table capacity (${cap}) (OM-A10).`);
+            $('#coversInput').val(cap);
+        }
+        autoSaveDraft();
+    }
+
+    function startTimer() {
+        let minutes = 0;
+        setInterval(() => {
+            minutes++;
+            $('#elapsedMinutes').text(minutes);
+        }, 60000);
+    }
 </script>
 }

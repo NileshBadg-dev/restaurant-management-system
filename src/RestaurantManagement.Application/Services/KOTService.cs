@@ -31,6 +31,12 @@ public class KOTService : IKOTService
                 WaiterName = k.WaiterName,
                 Status = k.Status,
                 Notes = k.Notes,
+                Type = k.Type,
+                Station = k.Station,
+                IsRush = k.IsRush,
+                PrintFailed = k.PrintFailed,
+                AcknowledgedByChef = k.AcknowledgedByChef,
+                Reason = k.Reason,
                 CreatedAt = k.CreatedAt,
                 Items = itemDict.TryGetValue(k.Id, out var itemList) ? itemList.Select(i => new KOTItemDto
                 {
@@ -38,7 +44,11 @@ public class KOTService : IKOTService
                     MenuItemName = i.MenuItemName,
                     Quantity = i.Quantity,
                     SpecialInstructions = i.SpecialInstructions,
-                    Status = i.Status
+                    Status = i.Status,
+                    OrderItemId = i.OrderItemId,
+                    Course = i.Course,
+                    IsCancelled = i.IsCancelled,
+                    Station = i.Station
                 }).ToList() : new List<KOTItemDto>()
             });
     }
@@ -59,6 +69,12 @@ public class KOTService : IKOTService
             WaiterName = kot.WaiterName,
             Status = kot.Status,
             Notes = kot.Notes,
+            Type = kot.Type,
+            Station = kot.Station,
+            IsRush = kot.IsRush,
+            PrintFailed = kot.PrintFailed,
+            AcknowledgedByChef = kot.AcknowledgedByChef,
+            Reason = kot.Reason,
             CreatedAt = kot.CreatedAt,
             Items = items.Select(i => new KOTItemDto
             {
@@ -66,7 +82,11 @@ public class KOTService : IKOTService
                 MenuItemName = i.MenuItemName,
                 Quantity = i.Quantity,
                 SpecialInstructions = i.SpecialInstructions,
-                Status = i.Status
+                Status = i.Status,
+                OrderItemId = i.OrderItemId,
+                Course = i.Course,
+                IsCancelled = i.IsCancelled,
+                Station = i.Station
             }).ToList()
         };
     }

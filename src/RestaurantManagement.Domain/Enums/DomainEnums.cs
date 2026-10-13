@@ -83,3 +83,44 @@ public enum LoyaltyTier
     Gold = 2,
     Platinum = 3
 }
+
+public enum KitchenMode
+{
+    FullKDS = 1,     // Mode 1: Full KDS (Screen in kitchen)
+    PrinterOnly = 2, // Mode 2: Printer only (Thermal printer, no screen)
+    NoDevice = 3     // Mode 3: No kitchen device (Cafe/counter slip)
+}
+
+public enum OrderItemStatus
+{
+    Pending = 1,     // Section B: New item (not yet sent to kitchen)
+    Sent = 2,        // Section A: Sent to kitchen (cooking not started / waiting)
+    Preparing = 3,   // Mode 1 only: Chef cooking
+    Ready = 4,       // Mode 1 or Mode 2 (if tracked): Ready for pickup
+    Served = 5,      // Served to guest
+    Cancelled = 6    // Cancelled / Voided
+}
+
+public enum KOTType
+{
+    Initial = 1,     // First KOT for order
+    Addition = 2,    // ADDITION KOT for new items
+    Cancellation = 3,// Cancel slip (STOP: CANCELLED)
+    NoteChange = 4,  // NOTE CHANGE slip
+    Remake = 5       // REMAKE slip (no charge)
+}
+
+public enum VoidApprovalSetting
+{
+    ManagerPIN = 1,
+    AnySignedInUser = 2,
+    Off = 3
+}
+
+public enum BillingUnservedItemsSetting
+{
+    Yes = 1,
+    Ask = 2,
+    No = 3
+}
+

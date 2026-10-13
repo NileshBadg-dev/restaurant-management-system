@@ -32,6 +32,9 @@ public class TableDto
     public decimal CurrentOrderAmount { get; set; }
     public int? WaiterId { get; set; }
     public string? WaiterName { get; set; }
+    public bool HasActiveDraft { get; set; }
+    public string? ActiveDraftUserName { get; set; }
+    public int? ActiveDraftMinutesAgo { get; set; }
 }
 
 public class TableCreateUpdateDto

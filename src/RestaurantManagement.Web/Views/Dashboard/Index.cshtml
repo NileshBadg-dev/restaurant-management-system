@@ -60,7 +60,7 @@
                 @if (isAuth)
                 {
                     <li>
-                        <a class="dropdown-item small text-danger fw-semibold" href="/Account/Logout">
+                        <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout" onclick="window.location.href='/Account/Logout';">
                             <i class="fa-solid fa-right-from-bracket me-2"></i> Sign Out
                         </a>
                     </li>
@@ -75,6 +75,10 @@
                 }
             </ul>
         </div>
+
+        <a href="/Account/Logout" onclick="window.location.href='/Account/Logout';" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 fw-semibold" style="font-size: 0.825rem;" title="Sign out of system">
+            <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+        </a>
     </div>
 </div>
 

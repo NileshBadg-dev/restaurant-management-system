@@ -152,6 +152,11 @@
                         <i class="fa-solid fa-arrows-rotate nav-icon" style="color: #059669;"></i>
                         <span class="nav-text">Switch User</span>
                     </a>
+
+                    <a class="nav-link text-danger" href="/Account/Logout" onclick="window.location.href='/Account/Logout';" data-title="Sign Out" data-bs-toggle="tooltip" data-bs-placement="right" title="Sign Out">
+                        <i class="fa-solid fa-right-from-bracket nav-icon text-danger"></i>
+                        <span class="nav-text text-danger fw-semibold">Sign Out</span>
+                    </a>
                 </div>
             </nav>
         </aside>
@@ -205,7 +210,7 @@
                                     @if (isAuthenticated)
                                     {
                                         <li>
-                                            <a class="dropdown-item small text-danger fw-semibold" href="/Account/Logout">
+                                            <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout" onclick="window.location.href='/Account/Logout';">
                                                 <i class="fa-solid fa-right-from-bracket me-2"></i> Sign Out
                                             </a>
                                         </li>
@@ -306,26 +311,32 @@
             // Interactive Role Switcher
             document.addEventListener('click', function (e) {
                 const item = e.target.closest('.role-dropdown-menu .dropdown-item');
-                if (item) {
-                    e.preventDefault();
-                    const dropdown = item.closest('.dropdown');
-                    if (dropdown) {
-                        dropdown.querySelectorAll('.dropdown-item').forEach(function (el) {
-                            el.classList.remove('active');
-                            const icon = el.querySelector('i');
-                            if (icon) {
-                                icon.classList.remove('text-white');
-                            }
-                        });
-                        item.classList.add('active');
-                        const activeIcon = item.querySelector('i');
-                        if (activeIcon) {
-                            activeIcon.classList.add('text-white');
+                if (!item) return;
+
+                const href = item.getAttribute('href');
+                // Allow direct navigation for real URLs (e.g. /Account/Logout, /Account/Login)
+                if (href && href !== '#' && !href.startsWith('javascript:')) {
+                    return;
+                }
+
+                e.preventDefault();
+                const dropdown = item.closest('.dropdown');
+                if (dropdown) {
+                    dropdown.querySelectorAll('.dropdown-item').forEach(function (el) {
+                        el.classList.remove('active');
+                        const icon = el.querySelector('i');
+                        if (icon) {
+                            icon.classList.remove('text-white');
                         }
-                        const roleBtnLabel = dropdown.querySelector('.role-dropdown-btn strong');
-                        if (roleBtnLabel) {
-                            roleBtnLabel.textContent = item.textContent.trim();
-                        }
+                    });
+                    item.classList.add('active');
+                    const activeIcon = item.querySelector('i');
+                    if (activeIcon) {
+                        activeIcon.classList.add('text-white');
+                    }
+                    const roleBtnLabel = dropdown.querySelector('.role-dropdown-btn strong');
+                    if (roleBtnLabel) {
+                        roleBtnLabel.textContent = item.textContent.trim();
                     }
                 }
             });

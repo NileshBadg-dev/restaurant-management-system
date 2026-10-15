@@ -40,6 +40,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.Cookie.Name = "GiranaRMS.Auth";
         options.LoginPath = "/Account/Login";
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
@@ -74,6 +75,19 @@ app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/", context =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        context.Response.Redirect("/Dashboard");
+    }
+    else
+    {
+        context.Response.Redirect("/Account/Login");
+    }
+    return Task.CompletedTask;
+});
 
 app.MapControllerRoute(
     name: "default",

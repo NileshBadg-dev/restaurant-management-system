@@ -183,6 +183,14 @@
         <div class="text-muted small fw-semibold">Restaurant Management System</div>
     </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success p-2 px-3 small rounded-3 mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-circle-check text-success flex-shrink-0"></i>
+            <div>@TempData["Success"]</div>
+        </div>
+    }
+
     @if (!string.IsNullOrEmpty(Model.ErrorMessage))
     {
         <div class="alert alert-danger p-2 px-3 small rounded-3 mb-3 d-flex align-items-center gap-2">

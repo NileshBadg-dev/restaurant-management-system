@@ -34,10 +34,6 @@ public class AccountController : Controller
         // If already signed in and not explicitly switching user, proceed to Dashboard
         if (User.Identity?.IsAuthenticated == true && !switchUser)
         {
-            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
-            {
-                return Redirect(returnUrl);
-            }
             return RedirectToAction("Index", "Dashboard");
         }
 
@@ -100,22 +96,19 @@ public class AccountController : Controller
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
         _logger.LogInformation("User {Username} ({Role}) logged in successfully", user.Username, user.Role);
 
-        // If specific returnUrl was requested (and is local), go there; otherwise always redirect to Dashboard
-        if (!string.IsNullOrEmpty(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl) && !model.ReturnUrl.Contains("/Account/Login"))
-        {
-            return Redirect(model.ReturnUrl);
-        }
-
-        return RedirectToAction("Index", "Dashboard");
+        // After successful login, always redirect directly to Dashboard page
+        return Redirect("/Dashboard");
     }
 
-    [HttpGet]
-    [Authorize]
+    [HttpGet, HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        TempData["Success"] = "You have been logged out successfully.";
-        return RedirectToAction(nameof(Login));
+        Response.Cookies.Delete("GiranaRMS.Auth");
+        Response.Cookies.Delete(CookieAuthenticationDefaults.AuthenticationScheme);
+        TempData["Success"] = "You have been signed out successfully.";
+        return RedirectToAction(nameof(Login), new { switchUser = true });
     }
 
     [HttpPost]

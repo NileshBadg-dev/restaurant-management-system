@@ -51,30 +51,42 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var bill in Model)
+                @if (!Model.Any())
                 {
                     <tr>
-                        <td class="fw-bold text-dark">@bill.InvoiceNumber</td>
-                        <td><span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle rounded-pill px-3 py-1">@bill.OrderNumber</span></td>
-                        <td>@(bill.TableNumber != null ? $"Table {bill.TableNumber}" : "Dine-in")</td>
-                        <td class="small text-secondary">@bill.BillDate.ToString("g")</td>
-                        <td class="fw-bold text-dark fs-6">₹@bill.GrandTotal.ToString("N0")</td>
-                        <td>
-                            @if (bill.IsPaid)
-                            {
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-check me-1"></i> Paid</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Payment</span>
-                            }
-                        </td>
-                        <td class="text-end">
-                            <a href="/Billing/Invoice/@bill.Id" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                <i class="fa-solid fa-eye me-1"></i> View Tax Invoice
-                            </a>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-file-invoice-dollar fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                            <p class="small mb-0 text-muted">No invoices or bills generated yet.</p>
                         </td>
                     </tr>
+                }
+                else
+                {
+                    @foreach (var bill in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold text-dark">@bill.InvoiceNumber</td>
+                            <td><span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle rounded-pill px-3 py-1">@bill.OrderNumber</span></td>
+                            <td>@(bill.TableNumber != null ? $"Table {bill.TableNumber}" : "Dine-in")</td>
+                            <td class="small text-secondary">@bill.BillDate.ToString("g")</td>
+                            <td class="fw-bold text-dark fs-6">₹@bill.GrandTotal.ToString("N0")</td>
+                            <td>
+                                @if (bill.IsPaid)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-check me-1"></i> Paid</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-clock me-1"></i> Pending Payment</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a href="/Billing/Invoice/@bill.Id" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                    <i class="fa-solid fa-eye me-1"></i> View Tax Invoice
+                                </a>
+                            </td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

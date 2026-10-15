@@ -1,0 +1,420 @@
+@model LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Sign In - " + Model.RestaurantName;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --brand-emerald: #059669;
+            --brand-emerald-hover: #047857;
+            --brand-amber: #d97706;
+            --border-color: #cbd5e1;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(5, 150, 105, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(217, 119, 6, 0.06) 0%, transparent 40%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            color: #0f172a;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: #ffffff;
+            border: 1.5px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.07);
+            padding: 32px 28px;
+        }
+
+        .brand-crest {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #059669 0%, #10b981 50%, #d97706 100%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            box-shadow: 0 6px 14px rgba(5, 150, 105, 0.25);
+            border: 2px solid #ffffff;
+        }
+
+        .brand-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #059669 0%, #0d9488 45%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Sleek Dynamic Role & Mode Indicator */
+        .role-mode-indicator {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            transition: all 0.2s ease;
+        }
+
+        .role-mode-indicator.highlight {
+            background: #f0fdf4;
+            border-color: #86efac;
+        }
+
+        .role-chip-btn {
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: #475569;
+            border-radius: 16px;
+            padding: 3px 10px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .role-chip-btn:hover, .role-chip-btn.active {
+            background: #ecfdf5;
+            border-color: var(--brand-emerald);
+            color: var(--brand-emerald);
+        }
+
+        /* Form Inputs */
+        .input-group-custom {
+            position: relative;
+        }
+
+        .input-group-custom .form-control {
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            height: 46px;
+            padding-left: 40px;
+            font-size: 0.92rem;
+            color: #0f172a;
+        }
+
+        .input-group-custom .form-control:focus {
+            border-color: var(--brand-emerald);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+        }
+
+        .input-group-custom .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 0.95rem;
+            pointer-events: none;
+        }
+
+        .toggle-pw-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .toggle-pw-btn:hover {
+            color: var(--brand-emerald);
+        }
+
+        .btn-signin {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            border: none;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border-radius: 10px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+            transition: all 0.2s ease;
+        }
+
+        .btn-signin:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <!-- Brand Header -->
+    <div class="text-center mb-3">
+        <div class="brand-crest mb-2">G</div>
+        <h2 class="brand-title mb-0">@Model.RestaurantName</h2>
+        <div class="text-muted small fw-semibold">Restaurant Management System</div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger p-2 px-3 small rounded-3 mb-3 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-circle-exclamation flex-shrink-0"></i>
+            <div>@Model.ErrorMessage</div>
+        </div>
+    }
+
+    <!-- Dynamic Role & Operational Mode Indicator -->
+    <div class="role-mode-indicator d-flex align-items-center justify-content-between p-2 px-3 rounded-3 mb-2" id="roleIndicatorBox">
+        <div class="d-flex align-items-center gap-2">
+            <i class="fa-solid fa-briefcase text-success" id="roleIcon"></i>
+            <span class="fw-bold small text-dark" id="roleName">Restaurant Manager</span>
+        </div>
+        <span class="badge bg-light text-secondary border rounded-pill px-2 py-1" style="font-size: 0.72rem;" id="modeName">
+            Operations Mode
+        </span>
+    </div>
+
+    <!-- Quick Role Switcher Chips -->
+    <div class="d-flex flex-wrap justify-content-center gap-1 mb-3">
+        <button type="button" class="role-chip-btn active" onclick="pickRole('manager', 'manager123', 'Restaurant Manager', 'fa-briefcase', '#059669', 'Operations Mode', this)">Manager</button>
+        <button type="button" class="role-chip-btn" onclick="pickRole('admin', 'admin123', 'Administrator', 'fa-user-gear', '#dc2626', 'Full Admin Mode', this)">Admin</button>
+        <button type="button" class="role-chip-btn" onclick="pickRole('cashier', 'cashier123', 'Cashier', 'fa-cash-register', '#4f46e5', 'Billing Mode', this)">Cashier</button>
+        <button type="button" class="role-chip-btn" onclick="pickRole('waiter', 'waiter123', 'Waiter', 'fa-tray', '#d97706', 'Fast POS Mode', this)">Waiter</button>
+        <button type="button" class="role-chip-btn" onclick="pickRole('kitchen', 'kitchen123', 'Kitchen Head', 'fa-kitchen-set', '#ea580c', 'KDS Screen Mode', this)">Kitchen</button>
+    </div>
+
+    <!-- Sign In Form Panel -->
+    <div id="loginFormSection">
+        <form method="post" asp-action="Login" asp-controller="Account">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+
+            <div class="input-group-custom mb-3">
+                <input type="text" class="form-control" id="usernameInput" name="Username" value="@Model.Username" placeholder="Username" required autocomplete="username" oninput="onUserType(this.value)" />
+                <i class="fa-regular fa-user input-icon"></i>
+            </div>
+
+            <div class="input-group-custom mb-3">
+                <input type="password" class="form-control" id="passwordInput" name="Password" value="@Model.Password" placeholder="Password" required autocomplete="current-password" />
+                <i class="fa-solid fa-lock input-icon"></i>
+                <button type="button" class="toggle-pw-btn" onclick="toggleVisibility('passwordInput', this)"><i class="fa-regular fa-eye"></i></button>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-3 small">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="rememberMe" name="RememberMe" value="true" checked />
+                    <label class="form-check-label text-secondary fw-semibold" for="rememberMe">Remember me</label>
+                </div>
+                <button type="button" class="btn btn-link p-0 small text-decoration-none fw-bold" style="color: var(--brand-emerald);" onclick="toggleForgotPassword(true)">
+                    Forgot password?
+                </button>
+            </div>
+
+            <button type="submit" class="btn btn-signin w-100">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
+        </form>
+    </div>
+
+    <!-- Optimized Forgot Password Panel -->
+    <div id="forgotPasswordSection" class="d-none">
+        <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+            <span class="fw-bold small text-dark"><i class="fa-solid fa-key text-warning me-1"></i> Reset Password</span>
+            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small text-secondary" onclick="toggleForgotPassword(false)">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back
+            </button>
+        </div>
+
+        <div id="forgotStatusAlert" class="alert d-none p-2 px-3 small rounded-3 mb-2"></div>
+
+        <form id="resetForm" onsubmit="submitForgotPassword(event)">
+            <div class="input-group-custom mb-2">
+                <input type="text" class="form-control form-control-sm" id="resetUser" placeholder="Username" required />
+                <i class="fa-regular fa-user input-icon"></i>
+            </div>
+
+            <div class="input-group-custom mb-2">
+                <input type="password" class="form-control form-control-sm" id="resetPin" placeholder="Manager PIN (1234)" required maxlength="10" />
+                <i class="fa-solid fa-shield-halved input-icon"></i>
+            </div>
+
+            <div class="input-group-custom mb-2">
+                <input type="password" class="form-control form-control-sm" id="resetNewPass" placeholder="New Password (min 4 chars)" required minlength="4" />
+                <i class="fa-solid fa-lock input-icon"></i>
+            </div>
+
+            <div class="input-group-custom mb-3">
+                <input type="password" class="form-control form-control-sm" id="resetConfirmPass" placeholder="Confirm New Password" required minlength="4" />
+                <i class="fa-solid fa-check-double input-icon"></i>
+            </div>
+
+            <button type="submit" class="btn btn-signin w-100" id="resetSubmitBtn">
+                Reset &amp; Save
+            </button>
+        </form>
+    </div>
+
+    <div class="text-center mt-3 pt-2 border-top text-muted small" style="font-size: 0.75rem;">
+        Girana Garden RMS &bull; Secure Terminal Access
+    </div>
+</div>
+
+<!-- Instant Client-Side Dictionary for 0ms Role Detection -->
+<script>
+    const roleMap = {
+        'admin': { name: 'Administrator', icon: 'fa-user-gear', color: '#dc2626', mode: 'Full Admin Mode', pass: 'admin123' },
+        'manager': { name: 'Restaurant Manager', icon: 'fa-briefcase', color: '#059669', mode: 'Operations Mode', pass: 'manager123' },
+        'cashier': { name: 'Cashier & Billing', icon: 'fa-cash-register', color: '#4f46e5', mode: 'Billing Mode', pass: 'cashier123' },
+        'waiter': { name: 'Floor Captain / Waiter', icon: 'fa-tray', color: '#d97706', mode: 'Fast POS Mode', pass: 'waiter123' },
+        'kitchen': { name: 'Kitchen Head / Chef', icon: 'fa-kitchen-set', color: '#ea580c', mode: 'KDS Screen Mode', pass: 'kitchen123' },
+        'inventory': { name: 'Inventory Staff', icon: 'fa-boxes-stacked', color: '#475569', mode: 'Stock Control Mode', pass: 'inventory123' }
+    };
+
+    function pickRole(user, pass, name, icon, color, mode, btn) {
+        document.getElementById('usernameInput').value = user;
+        document.getElementById('passwordInput').value = pass;
+        document.getElementById('resetUser').value = user;
+
+        document.querySelectorAll('.role-chip-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        applyRoleBadge(name, icon, color, mode);
+    }
+
+    function onUserType(val) {
+        val = (val || '').trim().toLowerCase();
+        const role = roleMap[val];
+        if (role) {
+            applyRoleBadge(role.name, role.icon, role.color, role.mode);
+            document.querySelectorAll('.role-chip-btn').forEach(b => {
+                b.classList.toggle('active', b.textContent.toLowerCase() === val || role.name.toLowerCase().includes(b.textContent.toLowerCase()));
+            });
+        } else if (val.length > 0) {
+            applyRoleBadge('Staff User (' + val + ')', 'fa-user', '#64748b', 'Standard Terminal');
+            document.querySelectorAll('.role-chip-btn').forEach(b => b.classList.remove('active'));
+        }
+    }
+
+    function applyRoleBadge(name, icon, color, mode) {
+        const iconElem = document.getElementById('roleIcon');
+        const nameElem = document.getElementById('roleName');
+        const modeElem = document.getElementById('modeName');
+        const box = document.getElementById('roleIndicatorBox');
+
+        iconElem.className = 'fa-solid ' + icon;
+        iconElem.style.color = color;
+        nameElem.textContent = name;
+        modeElem.textContent = mode;
+        box.classList.add('highlight');
+    }
+
+    function toggleVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector('i');
+        const isPw = input.type === 'password';
+        input.type = isPw ? 'text' : 'password';
+        icon.className = isPw ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    }
+
+    function toggleForgotPassword(show) {
+        document.getElementById('loginFormSection').classList.toggle('d-none', show);
+        document.getElementById('forgotPasswordSection').classList.toggle('d-none', !show);
+        if (show) {
+            document.getElementById('resetUser').value = document.getElementById('usernameInput').value;
+            document.getElementById('resetPin').focus();
+        } else {
+            document.getElementById('usernameInput').focus();
+        }
+    }
+
+    async function submitForgotPassword(e) {
+        e.preventDefault();
+        const btn = document.getElementById('resetSubmitBtn');
+        const alertBox = document.getElementById('forgotStatusAlert');
+
+        const user = document.getElementById('resetUser').value.trim();
+        const pin = document.getElementById('resetPin').value.trim();
+        const newPass = document.getElementById('resetNewPass').value;
+        const confirmPass = document.getElementById('resetConfirmPass').value;
+
+        if (newPass !== confirmPass) {
+            alertBox.className = 'alert alert-danger p-2 px-3 small rounded-3 mb-2';
+            alertBox.textContent = 'Passwords do not match.';
+            alertBox.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+
+        try {
+            const resp = await fetch('/Account/ForgotPassword', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Username: user, ManagerPin: pin, NewPassword: newPass, ConfirmPassword: confirmPass })
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                alertBox.className = 'alert alert-success p-2 px-3 small rounded-3 mb-2';
+                alertBox.textContent = data.message;
+                alertBox.classList.remove('d-none');
+
+                document.getElementById('usernameInput').value = user;
+                document.getElementById('passwordInput').value = newPass;
+
+                setTimeout(() => {
+                    toggleForgotPassword(false);
+                    alertBox.classList.add('d-none');
+                }, 1500);
+            } else {
+                alertBox.className = 'alert alert-danger p-2 px-3 small rounded-3 mb-2';
+                alertBox.textContent = data.message || 'Error resetting password.';
+                alertBox.classList.remove('d-none');
+            }
+        } catch (err) {
+            alertBox.className = 'alert alert-danger p-2 px-3 small rounded-3 mb-2';
+            alertBox.textContent = 'Server communication error.';
+            alertBox.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Reset & Save';
+        }
+    }
+
+    // Init on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const u = document.getElementById('usernameInput').value;
+        if (u) onUserType(u);
+    });
+</script>
+</body>
+</html>

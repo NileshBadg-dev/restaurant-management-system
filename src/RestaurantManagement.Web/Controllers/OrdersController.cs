@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.DTOs;
 using RestaurantManagement.Application.Interfaces;
@@ -6,6 +7,7 @@ using RestaurantManagement.Domain.Enums;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Authorize(Roles = "Admin,Manager,Waiter,Cashier,KitchenStaff,Cook")]
 public class OrdersController : Controller
 {
     private readonly IOrderService _orderService;

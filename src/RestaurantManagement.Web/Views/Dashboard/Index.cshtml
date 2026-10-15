@@ -1,12 +1,19 @@
 @model DashboardSummaryDto
 @{
     ViewData["Title"] = "Dashboard";
+    bool isAuth = User.Identity?.IsAuthenticated == true;
+    string dashUser = isAuth 
+        ? (User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Manager")
+        : "Manager";
+    string dashRole = isAuth
+        ? (User.FindFirst("RoleName")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Manager")
+        : "Manager";
 }
 
 <!-- Top Header Bar Matching Screenshot -->
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 anim-section dashboard-top-bar position-relative" style="z-index: 1050;">
     <div>
-        <div class="text-muted small fw-semibold" style="font-size: 0.825rem;">Good afternoon, Manager</div>
+        <div class="text-muted small fw-semibold" style="font-size: 0.825rem;">Good afternoon, @dashUser</div>
         <h2 class="fw-bold mb-0" style="color: #047857; font-family: var(--font-heading); font-size: 1.75rem; letter-spacing: -0.5px;">
             Girana Garden Dashboard
         </h2>
@@ -16,24 +23,56 @@
             <i class="fa-regular fa-calendar text-muted"></i>
             <span id="headerClockDate">@DateTime.Now.ToString("ddd, MMM dd, yyyy - hh:mm tt")</span>
         </div>
-        <a href="/Orders/POS?returnUrl=/Dashboard" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #00796b; border: none; font-size: 0.85rem;">
-            <i class="fa-solid fa-plus"></i> New Order
-        </a>
-        <a href="/Kitchen" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #b45309; border: none; font-size: 0.85rem;">
-            Kitchen KDS
-        </a>
+        @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Cashier"))
+        {
+            <a href="/Orders/POS?returnUrl=/Dashboard" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #00796b; border: none; font-size: 0.85rem;">
+                <i class="fa-solid fa-plus"></i> New Order
+            </a>
+        }
+        @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("KitchenStaff") || User.IsInRole("Cook"))
+        {
+            <a href="/Kitchen" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #b45309; border: none; font-size: 0.85rem;">
+                Kitchen KDS
+            </a>
+        }
 
         <!-- Live Role Display & Switcher (FR-AUTH-05) -->
         <div class="dropdown position-relative" style="z-index: 1055;">
-            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 border bg-white fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.825rem; border-color: #cbd5e1 !important;" title="Active User Role">
-                <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">Manager</strong>
+            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 border bg-white fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.825rem; border-color: #cbd5e1 !important;" title="Active User: @dashUser">
+                <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">@dashRole</strong>
             </button>
-            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="border-radius: 12px; border: 1.5px solid #cbd5e1; z-index: 1060;">
-                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
-                <li><a class="dropdown-item active" href="#"><i class="fa-solid fa-briefcase text-white me-2"></i> Manager</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cash-register text-primary me-2"></i> Cashier</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
-                <li><a class="dropdown-item" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
+            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="border-radius: 12px; border: 1.5px solid #cbd5e1; z-index: 1060; min-width: 210px;">
+                <li class="px-3 py-2 border-bottom bg-light rounded-top">
+                    <div class="fw-bold text-dark small">@dashUser</div>
+                    <div class="text-muted small" style="font-size: 0.72rem;">@dashRole &bull; Girana RMS</div>
+                </li>
+                <li><a class="dropdown-item @(dashRole == "Administrator" || dashRole == "Admin" ? "active" : "")" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
+                <li><a class="dropdown-item @(dashRole.Contains("Manager") ? "active" : "")" href="#"><i class="fa-solid fa-briefcase text-success me-2"></i> Manager</a></li>
+                <li><a class="dropdown-item @(dashRole.Contains("Cashier") ? "active" : "")" href="#"><i class="fa-solid fa-cash-register text-primary me-2"></i> Cashier</a></li>
+                <li><a class="dropdown-item @(dashRole.Contains("Waiter") ? "active" : "")" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
+                <li><a class="dropdown-item @(dashRole.Contains("Kitchen") ? "active" : "")" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
+                <li><hr class="dropdown-divider my-1"></li>
+                <li>
+                    <a class="dropdown-item small" href="/Account/Login?switchUser=true">
+                        <i class="fa-solid fa-arrows-rotate text-secondary me-2"></i> Switch User / Terminal
+                    </a>
+                </li>
+                @if (isAuth)
+                {
+                    <li>
+                        <a class="dropdown-item small text-danger fw-semibold" href="/Account/Logout">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i> Sign Out
+                        </a>
+                    </li>
+                }
+                else
+                {
+                    <li>
+                        <a class="dropdown-item small text-success fw-semibold" href="/Account/Login">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+                        </a>
+                    </li>
+                }
             </ul>
         </div>
     </div>
@@ -50,8 +89,8 @@
                     <i class="fa-solid fa-caret-up me-1"></i>12%
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">₹@(Model.TodaySales > 0 ? Model.TodaySales.ToString("N0") : "18,450")</div>
-            <div class="metric-desc-bold mt-1">vs yesterday ₹@(Model.YesterdaySales > 0 ? Model.YesterdaySales.ToString("N0") : "16,470")</div>
+            <div class="metric-value-bold mt-1">₹@Model.TodaySales.ToString("N0")</div>
+            <div class="metric-desc-bold mt-1">vs yesterday ₹@Model.YesterdaySales.ToString("N0")</div>
         </div>
     </div>
 
@@ -61,11 +100,11 @@
             <div class="d-flex justify-content-between align-items-center">
                 <span class="metric-label metric-label-bold">TODAY'S ORDERS</span>
                 <span class="badge rounded-pill" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.72rem; font-weight: 800;">
-                    <i class="fa-solid fa-caret-up me-1"></i>18%
+                    Live
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@(Model.TodayOrdersCount > 0 ? Model.TodayOrdersCount : 78)</div>
-            <div class="metric-desc-bold mt-1">@(Model.DineInOrdersCount > 0 ? Model.DineInOrdersCount : 52) dine-in &bull; @(Model.TakeawayOrdersCount > 0 ? Model.TakeawayOrdersCount : 26) takeaway</div>
+            <div class="metric-value-bold mt-1">@Model.TodayOrdersCount</div>
+            <div class="metric-desc-bold mt-1">@Model.DineInOrdersCount dine-in &bull; @Model.TakeawayOrdersCount takeaway</div>
         </div>
     </div>
 
@@ -92,7 +131,7 @@
                     Kitchen
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@(Model.PendingKOTCount > 0 ? Model.PendingKOTCount : 1)</div>
+            <div class="metric-value-bold mt-1">@Model.PendingKOTCount</div>
             <div class="metric-desc-bold mt-1">In kitchen queue</div>
         </div>
     </div>
@@ -133,11 +172,14 @@
                         @Model.FloorTables.SelectMany(f => f.Tables).Count(t => t.Status == TableStatus.Billing) Billing
                     </span>
                 </div>
-                <div>
-                    <a href="/Tables" class="fw-bold text-decoration-none small" style="color: #047857;">
-                        All Floors & Tables
-                    </a>
-                </div>
+                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Cashier"))
+                {
+                    <div>
+                        <a href="/Tables" class="fw-bold text-decoration-none small" style="color: #047857;">
+                            All Floors & Tables
+                        </a>
+                    </div>
+                }
             </div>
 
             <!-- Table Cards Grid (3 Columns) with 1 point borders -->
@@ -260,33 +302,37 @@
             @{
                 var topItems = Model.TopSellingItems != null && Model.TopSellingItems.Any() 
                     ? Model.TopSellingItems.Take(5).ToList() 
-                    : new List<TopSellingItemDto> {
-                        new() { MenuItemName = "Margherita Pizza", TotalQuantitySold = 142 },
-                        new() { MenuItemName = "Paneer Butter Masala", TotalQuantitySold = 118 },
-                        new() { MenuItemName = "Veg Biryani", TotalQuantitySold = 102 },
-                        new() { MenuItemName = "French Fries", TotalQuantitySold = 87 },
-                        new() { MenuItemName = "Cold Coffee", TotalQuantitySold = 76 }
-                    };
-                int maxQty = topItems.Max(x => x.TotalQuantitySold);
+                    : new List<TopSellingItemDto>();
+                int maxQty = topItems.Any() ? topItems.Max(x => x.TotalQuantitySold) : 1;
                 if (maxQty == 0) maxQty = 1;
             }
 
-            <div class="d-flex flex-column gap-3 mt-2">
-                @for (int i = 0; i < topItems.Count; i++)
-                {
-                    var item = topItems[i];
-                    int pct = (int)Math.Round((double)item.TotalQuantitySold / maxQty * 100);
-                    <div>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="small fw-semibold text-dark">@(i + 1). @item.MenuItemName</span>
-                            <span class="small text-muted fw-bold">@item.TotalQuantitySold <span class="text-success small fw-semibold">(@pct%)</span></span>
+            @if (topItems.Any())
+            {
+                <div class="d-flex flex-column gap-3 mt-2">
+                    @for (int i = 0; i < topItems.Count; i++)
+                    {
+                        var item = topItems[i];
+                        int pct = (int)Math.Round((double)item.TotalQuantitySold / maxQty * 100);
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="small fw-semibold text-dark">@(i + 1). @item.MenuItemName</span>
+                                <span class="small text-muted fw-bold">@item.TotalQuantitySold <span class="text-success small fw-semibold">(@pct%)</span></span>
+                            </div>
+                            <div class="progress" style="height: 6px; background-color: #f1f5f9; border-radius: 4px;">
+                                <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: #059669; border-radius: 4px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
                         </div>
-                        <div class="progress" style="height: 6px; background-color: #f1f5f9; border-radius: 4px;">
-                            <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: #059669; border-radius: 4px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5 text-muted">
+                    <i class="fa-solid fa-chart-simple fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                    <p class="small mb-0 text-muted">No sales recorded yet.</p>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -304,13 +350,7 @@
             @{
                 var displayOrders = Model.RecentOrders != null && Model.RecentOrders.Any()
                     ? Model.RecentOrders.Take(5).ToList()
-                    : new List<RecentOrderSummaryDto> {
-                        new() { OrderNumber = "ORD-1025", OrderType = "Dine-in", TableNumber = "05", TotalItems = 9, GrandTotal = 1124, Status = "Confirmed", CreatedAt = DateTime.Today.AddHours(14).AddMinutes(22) },
-                        new() { OrderNumber = "ORD-1024", OrderType = "Takeaway", TableNumber = "", TotalItems = 3, GrandTotal = 480, Status = "Ready", CreatedAt = DateTime.Today.AddHours(13).AddMinutes(37) },
-                        new() { OrderNumber = "ORD-1023", OrderType = "Dine-in", TableNumber = "01", TotalItems = 4, GrandTotal = 1240, Status = "Served", CreatedAt = DateTime.Today.AddHours(13).AddMinutes(25) },
-                        new() { OrderNumber = "ORD-1022", OrderType = "Dine-in", TableNumber = "02", TotalItems = 2, GrandTotal = 620, Status = "Preparing", CreatedAt = DateTime.Today.AddHours(12).AddMinutes(42) },
-                        new() { OrderNumber = "ORD-1021", OrderType = "Takeaway", TableNumber = "", TotalItems = 1, GrandTotal = 320, Status = "Ready", CreatedAt = DateTime.Today.AddHours(12).AddMinutes(10) }
-                    };
+                    : new List<RecentOrderSummaryDto>();
             }
 
             <div class="table-responsive">
@@ -327,32 +367,44 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var ord in displayOrders)
+                        @if (!displayOrders.Any())
                         {
-                            string badgeStyle = ord.Status switch {
-                                "Confirmed" => "background: #e0f2fe; color: #0284c7; border: 1pt solid #bae6fd;",
-                                "Ready" => "background: #dcfce7; color: #16a34a; border: 1pt solid #bbf7d0;",
-                                "Served" => "background: #f3e8ff; color: #7e22ce; border: 1pt solid #e9d5ff;",
-                                "Preparing" => "background: #fef3c7; color: #d97706; border: 1pt solid #fde68a;",
-                                _ => "background: #f1f5f9; color: #475569; border: 1pt solid #e2e8f0;"
-                            };
-
-                            string orderTypeDisplay = (ord.OrderType == "DineIn" || ord.OrderType == "Dine-In") ? "Dine-in" : ord.OrderType;
-                            string tableDisplay = string.IsNullOrEmpty(ord.TableNumber) ? "-" : "T" + ord.TableNumber.Replace("Table", "").Trim();
-
                             <tr>
-                                <td class="fw-bold text-dark">#@ord.OrderNumber</td>
-                                <td class="text-secondary small">@orderTypeDisplay</td>
-                                <td class="text-secondary small">@tableDisplay</td>
-                                <td class="text-secondary small">@ord.TotalItems</td>
-                                <td class="fw-bold text-dark small">₹@ord.GrandTotal.ToString("N0")</td>
-                                <td>
-                                    <span class="badge rounded-pill" style="@badgeStyle font-size: 0.7rem; font-weight: 600;">
-                                        @ord.Status
-                                    </span>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-receipt fs-3 d-block mb-2 text-secondary opacity-50"></i>
+                                    <span class="small">No recent orders found</span>
                                 </td>
-                                <td class="text-muted small">@ord.CreatedAt.ToString("hh:mm tt")</td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var ord in displayOrders)
+                            {
+                                string badgeStyle = ord.Status switch {
+                                    "Confirmed" => "background: #e0f2fe; color: #0284c7; border: 1pt solid #bae6fd;",
+                                    "Ready" => "background: #dcfce7; color: #16a34a; border: 1pt solid #bbf7d0;",
+                                    "Served" => "background: #f3e8ff; color: #7e22ce; border: 1pt solid #e9d5ff;",
+                                    "Preparing" => "background: #fef3c7; color: #d97706; border: 1pt solid #fde68a;",
+                                    _ => "background: #f1f5f9; color: #475569; border: 1pt solid #e2e8f0;"
+                                };
+
+                                string orderTypeDisplay = (ord.OrderType == "DineIn" || ord.OrderType == "Dine-In") ? "Dine-in" : ord.OrderType;
+                                string tableDisplay = string.IsNullOrEmpty(ord.TableNumber) ? "-" : "T" + ord.TableNumber.Replace("Table", "").Trim();
+
+                                <tr>
+                                    <td class="fw-bold text-dark">#@ord.OrderNumber</td>
+                                    <td class="text-secondary small">@orderTypeDisplay</td>
+                                    <td class="text-secondary small">@tableDisplay</td>
+                                    <td class="text-secondary small">@ord.TotalItems</td>
+                                    <td class="fw-bold text-dark small">₹@ord.GrandTotal.ToString("N0")</td>
+                                    <td>
+                                        <span class="badge rounded-pill" style="@badgeStyle font-size: 0.7rem; font-weight: 600;">
+                                            @ord.Status
+                                        </span>
+                                    </td>
+                                    <td class="text-muted small">@ord.CreatedAt.ToString("hh:mm tt")</td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
@@ -365,11 +417,20 @@
         <div class="dashboard-widget-card h-100">
             <h5 class="fw-bold mb-3 text-dark">Order Status</h5>
 
+            @{
+                int statusTotal = Model.NewOrdersCount + Model.PreparingOrdersCount + Model.ReadyOrdersCount + Model.ServedOrdersCount + Model.CancelledOrdersCount;
+                int newPct = statusTotal > 0 ? (int)Math.Round((double)Model.NewOrdersCount / statusTotal * 100) : 0;
+                int prepPct = statusTotal > 0 ? (int)Math.Round((double)Model.PreparingOrdersCount / statusTotal * 100) : 0;
+                int readyPct = statusTotal > 0 ? (int)Math.Round((double)Model.ReadyOrdersCount / statusTotal * 100) : 0;
+                int servedPct = statusTotal > 0 ? (int)Math.Round((double)Model.ServedOrdersCount / statusTotal * 100) : 0;
+                int cancelPct = statusTotal > 0 ? (int)Math.Round((double)Model.CancelledOrdersCount / statusTotal * 100) : 0;
+            }
+
             <div class="d-flex align-items-center justify-content-between mt-2">
                 <div style="position: relative; width: 140px; height: 140px; flex-shrink: 0;">
                     <canvas id="orderStatusDonutChart"></canvas>
                     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                        <div class="fs-4 fw-bold text-dark" style="line-height: 1.1;">78</div>
+                        <div class="fs-4 fw-bold text-dark" style="line-height: 1.1;">@statusTotal</div>
                         <div class="text-muted" style="font-size: 0.65rem;">Total orders</div>
                     </div>
                 </div>
@@ -377,23 +438,23 @@
                 <div class="d-flex flex-column gap-2 small ps-2">
                     <div class="d-flex align-items-center gap-2">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3b82f6;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">New: <strong>18</strong> &bull; 23%</span>
+                        <span class="text-secondary" style="font-size: 0.75rem;">New: <strong>@Model.NewOrdersCount</strong> &bull; @newPct%</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Preparing: <strong>22</strong> &bull; 28%</span>
+                        <span class="text-secondary" style="font-size: 0.75rem;">Preparing: <strong>@Model.PreparingOrdersCount</strong> &bull; @prepPct%</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Ready: <strong>16</strong> &bull; 21%</span>
+                        <span class="text-secondary" style="font-size: 0.75rem;">Ready: <strong>@Model.ReadyOrdersCount</strong> &bull; @readyPct%</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#8b5cf6;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Served: <strong>14</strong> &bull; 18%</span>
+                        <span class="text-secondary" style="font-size: 0.75rem;">Served: <strong>@Model.ServedOrdersCount</strong> &bull; @servedPct%</span>
                     </div>
                     <div class="d-flex align-items-center gap-2">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Cancelled: <strong>8</strong> &bull; 10%</span>
+                        <span class="text-secondary" style="font-size: 0.75rem;">Cancelled: <strong>@Model.CancelledOrdersCount</strong> &bull; @cancelPct%</span>
                     </div>
                 </div>
             </div>
@@ -480,45 +541,28 @@
             <h5 class="fw-bold mb-3 text-dark">Inventory Alerts</h5>
 
             <div class="d-flex flex-column gap-3 mt-1">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="fw-bold text-dark small">Tomatoes</span>
-                        <span class="text-muted small"> : 2 kg</span>
+                @if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any())
+                {
+                    @foreach (var alert in Model.LowStockAlerts)
+                    {
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="fw-bold text-dark small">@alert.ItemName</span>
+                                <span class="text-muted small"> : @alert.CurrentStock @alert.Unit</span>
+                            </div>
+                            <span class="badge rounded-pill" style="@(alert.AlertLevel == "Critical" ? "background: #fee2e2; color: #dc2626;" : "background: #fef3c7; color: #b45309;") font-size: 0.7rem; font-weight: 600;">
+                                @alert.AlertLevel
+                            </span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-boxes-stacked fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                        <p class="small mb-0 text-muted">All inventory items sufficiently stocked.</p>
                     </div>
-                    <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; font-size: 0.7rem; font-weight: 600;">
-                        Low stock
-                    </span>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="fw-bold text-dark small">Onions</span>
-                        <span class="text-muted small"> : 5 kg</span>
-                    </div>
-                    <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; font-size: 0.7rem; font-weight: 600;">
-                        Low stock
-                    </span>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="fw-bold text-dark small">Paneer</span>
-                        <span class="text-muted small"> : 0.5 kg</span>
-                    </div>
-                    <span class="badge rounded-pill" style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 600;">
-                        Out of stock
-                    </span>
-                </div>
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="fw-bold text-dark small">Cooking oil</span>
-                        <span class="text-muted small"> : 10 L</span>
-                    </div>
-                    <span class="badge rounded-pill" style="background: #dcfce7; color: #15803d; font-size: 0.7rem; font-weight: 600;">
-                        In stock
-                    </span>
-                </div>
+                }
             </div>
         </div>
     </div>
@@ -543,12 +587,14 @@
         // 2. Order Status Donut Chart
         const donutCtx = document.getElementById('orderStatusDonutChart');
         if (donutCtx) {
+            const counts = [@Model.NewOrdersCount, @Model.PreparingOrdersCount, @Model.ReadyOrdersCount, @Model.ServedOrdersCount, @Model.CancelledOrdersCount];
+            const hasOrders = counts.some(c => c > 0);
             new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
                     labels: ['New', 'Preparing', 'Ready', 'Served', 'Cancelled'],
                     datasets: [{
-                        data: [18, 22, 16, 14, 8],
+                        data: hasOrders ? counts : [0, 0, 0, 0, 0],
                         backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'],
                         borderWidth: 2,
                         borderColor: '#ffffff'
@@ -575,14 +621,18 @@
         // 3. Employee Attendance Double Bar Chart
         const barCtx = document.getElementById('employeeAttendanceBarChart');
         if (barCtx) {
+            const staffLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.RoleName)));
+            const staffPresent = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.PresentCount)));
+            const staffTotal = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.TotalCount)));
+
             new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels: ['Managers', 'Chefs / Cooks', 'Waiters', 'Housekeeping', 'Cashiers'],
+                    labels: staffLabels.length ? staffLabels : ['Managers', 'Chefs / Cooks', 'Waiters', 'Housekeeping', 'Cashiers'],
                     datasets: [
                         {
                             label: 'On duty (present)',
-                            data: [1, 2, 2, 2, 1],
+                            data: staffPresent.length ? staffPresent : [1, 2, 2, 2, 1],
                             backgroundColor: '#10b981',
                             borderRadius: 3,
                             barThickness: 16,
@@ -592,7 +642,7 @@
                         },
                         {
                             label: 'Total registered staff',
-                            data: [1, 2, 2, 2, 1],
+                            data: staffTotal.length ? staffTotal : [1, 2, 2, 2, 1],
                             backgroundColor: '#cbd5e1',
                             borderRadius: 3,
                             barThickness: 16,
@@ -615,7 +665,6 @@
                         },
                         y: {
                             beginAtZero: true,
-                            max: 2,
                             ticks: { stepSize: 1, precision: 0 },
                             grid: { color: '#f1f5f9' }
                         }
@@ -627,13 +676,16 @@
         // 4. Sales Overview Smooth Green Area Chart
         const areaCtx = document.getElementById('salesOverviewAreaChart');
         if (areaCtx) {
+            const trendLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySalesTrend.Select(w => w.Date.ToString("MMM dd"))));
+            const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySalesTrend.Select(w => w.SalesAmount)));
+
             new Chart(areaCtx, {
                 type: 'line',
                 data: {
-                    labels: ['Oct 6', 'Oct 7', 'Oct 8', 'Oct 9', 'Oct 10', 'Oct 11', 'Oct 12'],
+                    labels: trendLabels,
                     datasets: [{
                         label: 'Sales Revenue',
-                        data: [13000, 8000, 13500, 14000, 21000, 17000, 21000],
+                        data: trendData,
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.14)',
                         fill: true,
@@ -666,11 +718,9 @@
                         },
                         y: {
                             beginAtZero: true,
-                            max: 30000,
                             ticks: {
-                                stepSize: 10000,
                                 callback: function(val) {
-                                    return val === 0 ? '₹0' : Number(val).toLocaleString();
+                                    return val === 0 ? '₹0' : '₹' + Number(val).toLocaleString();
                                 }
                             },
                             grid: { color: '#f1f5f9' }

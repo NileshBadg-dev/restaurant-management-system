@@ -88,6 +88,10 @@ public class DashboardSummaryDto
     public int PendingKOTCount { get; set; }
     public int CompletedOrdersCount { get; set; }
     public int CancelledOrdersCount { get; set; }
+    public int NewOrdersCount { get; set; }
+    public int PreparingOrdersCount { get; set; }
+    public int ReadyOrdersCount { get; set; }
+    public int ServedOrdersCount { get; set; }
     public List<LowStockDto> LowStockAlerts { get; set; } = new();
     public List<TopSellingItemDto> TopSellingItems { get; set; } = new();
     public List<FloorDto> FloorTables { get; set; } = new();

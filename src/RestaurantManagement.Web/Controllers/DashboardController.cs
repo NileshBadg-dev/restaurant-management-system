@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.Interfaces;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Authorize]
 public class DashboardController : Controller
 {
     private readonly IDashboardService _dashboardService;

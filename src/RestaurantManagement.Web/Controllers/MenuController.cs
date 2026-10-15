@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.DTOs;
 using RestaurantManagement.Application.Interfaces;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Authorize(Roles = "Admin,Manager,Waiter,Cashier")]
 public class MenuController : Controller
 {
     private readonly IMenuService _menuService;

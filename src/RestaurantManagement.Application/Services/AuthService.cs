@@ -52,10 +52,32 @@ public class AuthService : IAuthService
         return user != null ? MapToUserDto(user) : null;
     }
 
+    public async Task<UserDto?> GetUserByUsernameAsync(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username)) return null;
+        var users = await _unitOfWork.Users.FindAsync(u => u.Username.ToLower() == username.Trim().ToLower() && !u.IsDeleted);
+        var user = users.FirstOrDefault();
+        return user != null ? MapToUserDto(user) : null;
+    }
+
     public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
     {
         var users = await _unitOfWork.Users.GetAllAsync();
         return users.Where(u => !u.IsDeleted).Select(MapToUserDto);
+    }
+
+    public async Task<bool> ResetPasswordByUsernameAsync(string username, string newPassword)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(newPassword)) return false;
+        var users = await _unitOfWork.Users.FindAsync(u => u.Username.ToLower() == username.Trim().ToLower() && !u.IsDeleted);
+        var user = users.FirstOrDefault();
+        if (user == null) return false;
+
+        user.PasswordHash = newPassword;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
     }
 
     public async Task<bool> ChangePasswordAsync(PasswordChangeDto dto)

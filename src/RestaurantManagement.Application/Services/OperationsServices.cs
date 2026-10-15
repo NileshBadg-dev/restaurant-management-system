@@ -329,6 +329,10 @@ public class DashboardService : IDashboardService
 
         int completedCount = activeOrders.Count(o => o.Status == OrderStatus.Completed);
         int cancelledCount = activeOrders.Count(o => o.Status == OrderStatus.Cancelled);
+        int newOrdersCount = activeOrders.Count(o => o.Status == OrderStatus.Pending || o.Status == OrderStatus.Confirmed);
+        int preparingOrdersCount = activeOrders.Count(o => o.Status == OrderStatus.Preparing);
+        int readyOrdersCount = activeOrders.Count(o => o.Status == OrderStatus.Ready);
+        int servedOrdersCount = activeOrders.Count(o => o.Status == OrderStatus.Completed);
 
         var inventory = await _unitOfWork.InventoryItems.GetAllAsync();
         var lowStock = inventory.Where(i => !i.IsDeleted && i.CurrentStock <= i.MinimumStock)
@@ -455,6 +459,10 @@ public class DashboardService : IDashboardService
             PendingKOTCount = pendingKots,
             CompletedOrdersCount = completedCount,
             CancelledOrdersCount = cancelledCount,
+            NewOrdersCount = newOrdersCount,
+            PreparingOrdersCount = preparingOrdersCount,
+            ReadyOrdersCount = readyOrdersCount,
+            ServedOrdersCount = servedOrdersCount,
             LowStockAlerts = lowStock,
             TopSellingItems = topSelling,
             FloorTables = floorTables,

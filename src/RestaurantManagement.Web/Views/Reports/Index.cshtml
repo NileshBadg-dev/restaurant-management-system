@@ -74,15 +74,27 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var day in Model.DailySummaries)
+                @if (!Model.DailySummaries.Any())
                 {
-                    decimal dayTax = Math.Round(day.SalesAmount * 0.05m / 1.05m, 2);
                     <tr>
-                        <td class="fw-bold text-dark">@day.Date.ToString("dd MMM yyyy (ddd)")</td>
-                        <td><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-3 py-1">@day.OrdersCount Orders</span></td>
-                        <td class="text-secondary">₹@dayTax.ToString("N0")</td>
-                        <td class="text-end fw-bold text-dark fs-6">₹@day.SalesAmount.ToString("N0")</td>
+                        <td colspan="4" class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-chart-line fs-2 d-block mb-2 text-secondary opacity-50"></i>
+                            <p class="small mb-0 text-muted">No sales records found for the selected period.</p>
+                        </td>
                     </tr>
+                }
+                else
+                {
+                    @foreach (var day in Model.DailySummaries)
+                    {
+                        decimal dayTax = Math.Round(day.SalesAmount * 0.05m / 1.05m, 2);
+                        <tr>
+                            <td class="fw-bold text-dark">@day.Date.ToString("dd MMM yyyy (ddd)")</td>
+                            <td><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-3 py-1">@day.OrdersCount Orders</span></td>
+                            <td class="text-secondary">₹@dayTax.ToString("N0")</td>
+                            <td class="text-end fw-bold text-dark fs-6">₹@day.SalesAmount.ToString("N0")</td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

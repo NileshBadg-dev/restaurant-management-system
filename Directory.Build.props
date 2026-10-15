@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Disable NuGet package vulnerability audit network checks to prevent 50+ second build hangs -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

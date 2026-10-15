@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Domain.Entities;
@@ -7,6 +8,7 @@ using RestaurantManagement.Domain.Enums;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Authorize(Roles = "Admin,Manager,KitchenStaff,Cook")]
 public class KitchenController : Controller
 {
     private readonly IKOTService _kotService;

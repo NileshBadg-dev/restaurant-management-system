@@ -1,0 +1,26 @@
+@{
+    ViewData["Title"] = "Access Restricted";
+}
+
+<div class="d-flex align-items-center justify-content-center min-vh-75 py-5">
+    <div class="glass-card p-5 text-center shadow-lg border" style="max-width: 480px; border-radius: 20px; border-color: #cbd5e1 !important;">
+        <div class="mb-4">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-danger-subtle text-danger" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                <i class="fa-solid fa-shield-halved"></i>
+            </span>
+        </div>
+        <h3 class="fw-bold text-dark mb-2" style="font-family: var(--font-heading);">Access Restricted</h3>
+        <p class="text-secondary small mb-4">
+            Your current assigned role does not have authorization to view this section or perform this operation.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="/Dashboard" class="btn btn-outline-success rounded-pill px-4 fw-semibold">
+                <i class="fa-solid fa-gauge-high me-1"></i> Return to Dashboard
+            </a>
+            <a href="/Account/Login?switchUser=true" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold">
+                <i class="fa-solid fa-arrows-rotate me-1"></i> Switch Account
+            </a>
+        </div>
+    </div>
+</div>
+

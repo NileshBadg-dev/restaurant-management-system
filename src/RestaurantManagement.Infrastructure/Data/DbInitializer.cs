@@ -47,16 +47,16 @@ public static class DbInitializer
         context.SaveChanges();
 
         var t1 = new Table { TableNumber = "01", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t2 = new Table { TableNumber = "02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Occupied, WaiterId = waiter.Id };
-        var t3 = new Table { TableNumber = "03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Reserved };
+        var t2 = new Table { TableNumber = "02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t3 = new Table { TableNumber = "03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
         var t4 = new Table { TableNumber = "04", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t5 = new Table { TableNumber = "05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Billing, WaiterId = waiter.Id };
+        var t5 = new Table { TableNumber = "05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
         
         var t11 = new Table { TableNumber = "11", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
         var t12 = new Table { TableNumber = "12", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
         
         var t21 = new Table { TableNumber = "21", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
-        var t22 = new Table { TableNumber = "22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Reserved };
+        var t22 = new Table { TableNumber = "22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Available };
 
         context.Tables.AddRange(t1, t2, t3, t4, t5, t11, t12, t21, t22);
         context.SaveChanges();
@@ -82,96 +82,16 @@ public static class DbInitializer
         context.MenuItems.AddRange(paneerTikka, dalMakhani, butterNaan, chickenBiryani, coldDrink, coldCoffee, gulabJamun);
         context.SaveChanges();
 
-        // 5. Seed Inventory Items
+        // 5. Seed Inventory Items (Initial healthy stock for operations)
         var paneerStock = new InventoryItem { Name = "Paneer", Category = "Dairy", Unit = "KG", CurrentStock = 25.0m, MinimumStock = 10.0m, UnitCost = 350m, ReorderLevel = 12m };
-        var tomatoStock = new InventoryItem { Name = "Tomato", Category = "Vegetables", Unit = "KG", CurrentStock = 4.5m, MinimumStock = 10.0m, UnitCost = 40m, ReorderLevel = 15m }; // Low Stock
-        var oilStock = new InventoryItem { Name = "Cooking Oil", Category = "Grocery", Unit = "L", CurrentStock = 1.5m, MinimumStock = 10.0m, UnitCost = 140m, ReorderLevel = 12m }; // Critical
+        var tomatoStock = new InventoryItem { Name = "Tomato", Category = "Vegetables", Unit = "KG", CurrentStock = 20.0m, MinimumStock = 10.0m, UnitCost = 40m, ReorderLevel = 15m };
+        var oilStock = new InventoryItem { Name = "Cooking Oil", Category = "Grocery", Unit = "L", CurrentStock = 20.0m, MinimumStock = 10.0m, UnitCost = 140m, ReorderLevel = 12m };
         var riceStock = new InventoryItem { Name = "Basmati Rice", Category = "Grocery", Unit = "KG", CurrentStock = 50.0m, MinimumStock = 20.0m, UnitCost = 110m, ReorderLevel = 25m };
 
         context.InventoryItems.AddRange(paneerStock, tomatoStock, oilStock, riceStock);
         context.SaveChanges();
 
-        // 6. Seed Customers & Loyalty
-        var customer1 = new Customer
-        {
-            Name = "Rahul Sharma",
-            Phone = "9876543210",
-            Email = "rahul.sharma@example.com",
-            Address = "Satellite, Ahmedabad",
-            TotalVisits = 12,
-            TotalSpent = 25500m,
-            LoyaltyPoints = 850,
-            Tier = LoyaltyTier.Gold,
-            LastVisitDate = DateTime.UtcNow.AddDays(-2)
-        };
-        context.Customers.Add(customer1);
-        context.SaveChanges();
-
-        // 7. Seed Active Order on Table 05
-        var sampleOrder = new Order
-        {
-            OrderNumber = "ORD-1025",
-            OrderType = OrderType.DineIn,
-            Status = OrderStatus.Confirmed,
-            TableId = t5.Id,
-            WaiterId = waiter.Id,
-            CustomerId = customer1.Id,
-            CustomerName = customer1.Name,
-            CustomerPhone = customer1.Phone,
-            SpecialInstructions = "Less spicy for Paneer Tikka",
-            SubTotal = 1070m,
-            CGST = 26.75m,
-            SGST = 26.75m,
-            TotalTax = 53.50m,
-            DiscountAmount = 0m,
-            GrandTotal = 1123.50m,
-            CreatedAt = DateTime.UtcNow.AddMinutes(-35)
-        };
-
-        sampleOrder.Items.Add(new OrderItem { MenuItemId = paneerTikka.Id, ItemName = "Paneer Tikka", UnitPrice = 250m, Quantity = 2, TotalPrice = 500m, SpecialInstructions = "Less spicy" });
-        sampleOrder.Items.Add(new OrderItem { MenuItemId = butterNaan.Id, ItemName = "Butter Naan", UnitPrice = 50m, Quantity = 4, TotalPrice = 200m });
-        sampleOrder.Items.Add(new OrderItem { MenuItemId = dalMakhani.Id, ItemName = "Dal Makhani", UnitPrice = 250m, Quantity = 1, TotalPrice = 250m });
-        sampleOrder.Items.Add(new OrderItem { MenuItemId = coldDrink.Id, ItemName = "Cold Drink / Soda", UnitPrice = 60m, Quantity = 2, TotalPrice = 120m });
-
-        context.Orders.Add(sampleOrder);
-        context.SaveChanges();
-
-        t5.CurrentOrderId = sampleOrder.Id;
-        context.Tables.Update(t5);
-
-        // Seed initial Bill for Order 1025 on Table 05 (Status: Billing)
-        var sampleBill = new Bill
-        {
-            InvoiceNumber = "INV-2026-000125",
-            OrderId = sampleOrder.Id,
-            BillDate = DateTime.UtcNow.AddMinutes(-10),
-            SubTotal = sampleOrder.SubTotal,
-            CGST = sampleOrder.CGST,
-            SGST = sampleOrder.SGST,
-            GrandTotal = sampleOrder.GrandTotal,
-            IsPaid = false
-        };
-        context.Bills.Add(sampleBill);
-
-        // 8. Seed KOT for Order 1025
-        var kot1 = new KOT
-        {
-            KOTNumber = "KOT-1025",
-            OrderId = sampleOrder.Id,
-            TableNumber = "05",
-            WaiterName = waiter.FullName,
-            Status = KOTStatus.Preparing,
-            Notes = "Less spicy",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-30)
-        };
-
-        kot1.Items.Add(new KOTItem { MenuItemName = "Paneer Tikka", Quantity = 2, SpecialInstructions = "Less spicy", Status = KOTStatus.Preparing });
-        kot1.Items.Add(new KOTItem { MenuItemName = "Butter Naan", Quantity = 4, Status = KOTStatus.New });
-        kot1.Items.Add(new KOTItem { MenuItemName = "Dal Makhani", Quantity = 1, Status = KOTStatus.Preparing });
-
-        context.KOTs.Add(kot1);
-
-        // 9. Seed Employees & Expenses
+        // 6. Seed Staff Roster Master Data
         context.Employees.AddRange(
             new Employee { Name = "Rajesh Verma", Email = "rajesh.manager@giranagarden.com", Phone = "9876500002", Role = UserRole.Manager, BaseSalary = 45000m, Shift = "General", IsActive = true },
             new Employee { Name = "Chef Sanjeev Kapoor", Email = "cook.head@giranagarden.com", Phone = "9876500010", Role = UserRole.Cook, BaseSalary = 38000m, Shift = "Morning", IsActive = true },
@@ -182,8 +102,6 @@ public static class DbInitializer
             new Employee { Name = "Kishore Solanki", Email = "kishore.hk@giranagarden.com", Phone = "9876500012", Role = UserRole.Housekeeping, BaseSalary = 15000m, Shift = "Morning", IsActive = true },
             new Employee { Name = "Pooja Ben", Email = "pooja.hk@giranagarden.com", Phone = "9876500013", Role = UserRole.Housekeeping, BaseSalary = 15000m, Shift = "Evening", IsActive = true }
         );
-
-        context.Expenses.Add(new Expense { Category = "Electricity", Description = "Monthly electricity bill", Amount = 12500m, ExpenseDate = DateTime.UtcNow.AddDays(-5), RecordedBy = "Admin" });
 
         context.SaveChanges();
     }

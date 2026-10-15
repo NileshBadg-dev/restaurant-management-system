@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.DTOs;
 using RestaurantManagement.Application.Interfaces;
 
 namespace RestaurantManagement.Web.Controllers;
 
+[Authorize(Roles = "Admin,Manager,Cashier")]
 public class BillingController : Controller
 {
     private readonly IBillingService _billingService;

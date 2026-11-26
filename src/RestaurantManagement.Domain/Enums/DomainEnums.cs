@@ -84,19 +84,12 @@ public enum LoyaltyTier
     Platinum = 3
 }
 
-public enum KitchenMode
-{
-    FullKDS = 1,     // Mode 1: Full KDS (Screen in kitchen)
-    PrinterOnly = 2, // Mode 2: Printer only (Thermal printer, no screen)
-    NoDevice = 3     // Mode 3: No kitchen device (Cafe/counter slip)
-}
-
 public enum OrderItemStatus
 {
     Pending = 1,     // Section B: New item (not yet sent to kitchen)
     Sent = 2,        // Section A: Sent to kitchen (cooking not started / waiting)
-    Preparing = 3,   // Mode 1 only: Chef cooking
-    Ready = 4,       // Mode 1 or Mode 2 (if tracked): Ready for pickup
+    Preparing = 3,   // Chef cooking
+    Ready = 4,       // Ready for pickup
     Served = 5,      // Served to guest
     Cancelled = 6    // Cancelled / Voided
 }

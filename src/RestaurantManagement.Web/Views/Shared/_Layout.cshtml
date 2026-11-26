@@ -1,13 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
+@using System.Security.Claims
+@inject RestaurantManagement.Web.Services.IWebConfigCacheService ConfigCache
 @{
+    var setting = await ConfigCache.GetSettingsAsync();
+    var restaurantName = string.IsNullOrWhiteSpace(setting.RestaurantName) ? "Hotel Kumbharwada" : setting.RestaurantName;
+    var restaurantNameMr = string.IsNullOrWhiteSpace(setting.RestaurantNameMr) ? restaurantName : setting.RestaurantNameMr;
+    var logoUrl = string.IsNullOrWhiteSpace(setting.LogoUrl) ? string.Empty : setting.LogoUrl;
+    var initialChar = restaurantName.Trim().Length > 0 ? restaurantName.Trim()[0].ToString().ToUpperInvariant() : "H";
+
+    var enDictJson = ConfigCache.GetI18nDictionaryJson("en");
+    var mrDictJson = ConfigCache.GetI18nDictionaryJson("mr");
+
     bool isAuthenticated = User.Identity?.IsAuthenticated == true;
-    string displayName = isAuthenticated 
-        ? (User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Staff")
+    string displayName = isAuthenticated
+        ? (User.FindFirst(ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Staff")
         : "Guest";
+    string displayNameMr = isAuthenticated
+        ? (User.FindFirst("FullNameMr")?.Value ?? displayName)
+        : "पाहुणे";
     string displayRole = isAuthenticated
-        ? (User.FindFirst("RoleName")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Staff")
+        ? (User.FindFirst("RoleName")?.Value ?? User.FindFirst(ClaimTypes.Role)?.Value ?? "Staff")
         : "Guest";
+    string preferredLang = User.FindFirst("PreferredLanguage")?.Value ?? Context.Request.Cookies["rms_lang"] ?? "en";
+    if (preferredLang != "mr") preferredLang = "en";
 
     bool isAdmin = User.IsInRole("Admin");
     bool isManager = User.IsInRole("Manager");
@@ -16,7 +30,6 @@
     bool isKitchen = User.IsInRole("KitchenStaff") || User.IsInRole("Cook");
     bool isInventory = User.IsInRole("InventoryStaff");
 
-    // Role-based navigation permissions
     bool canViewTables = isAdmin || isManager || isWaiter || isCashier;
     bool canTakeOrders = isAdmin || isManager || isWaiter || isCashier;
     bool canViewOrders = isAdmin || isManager || isWaiter || isCashier || isKitchen;
@@ -27,199 +40,287 @@
     bool canViewInventory = isAdmin || isManager || isInventory;
     bool canViewStaff = isAdmin || isManager;
     bool canViewReports = isAdmin || isManager || isCashier;
+
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var currentTab = Context.Request.Query["tab"].ToString().ToLowerInvariant();
+    bool isSettingsPage = currentController == "Masters" && (currentAction == "Settings" || currentTab == "settings");
+    var pageTitleKey = ViewData["TitleKey"]?.ToString() ?? "";
 }
+<!DOCTYPE html>
+<html lang="@preferredLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Girana Garden Restaurant Management System</title>
-    <!-- Bootstrap 5 CSS -->
+    <title data-page-title-key="@pageTitleKey">@ViewData["Title"] - @restaurantName</title>
+    <link id="appFavicon" rel="icon" href="@(!string.IsNullOrEmpty(logoUrl) ? logoUrl : "/assets/hotel-logo.jpg")" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
-    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="~/css/site.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>
+        (function () {
+            try {
+                var savedLang = localStorage.getItem('rms_lang');
+                if (savedLang === 'mr' || savedLang === 'en') {
+                    document.documentElement.setAttribute('lang', savedLang);
+                }
+            } catch (e) { }
+        })();
+    </script>
 </head>
 <body>
-    <div class="app-layout layout-collapsed" id="appLayout">
-        <!-- Collapsible Vertical Sidebar Tabs -->
-        <aside class="app-sidebar sidebar-collapsed" id="appSidebar">
-            <!-- Sidebar Header / Brand -->
+    <!-- Toast Container -->
+    <div id="rmsToastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1095;"></div>
+
+    <!-- Floating Collapsed Rail Tooltip & Masters Flyout -->
+    <div id="railFloatingTooltip" class="rail-floating-tooltip d-none" role="tooltip"></div>
+    @if (canViewMasters)
+    {
+        <div id="mastersRailFlyout" class="masters-rail-flyout d-none" role="menu">
+            <a href="/Masters" class="@(currentController == "Masters" && !isSettingsPage ? "active" : "")" role="menuitem">
+                <i class="fa-solid fa-layer-group"></i>
+                <span data-i18n="nav.masters">Masters</span>
+            </a>
+            <a href="/Masters/Settings" class="@(isSettingsPage ? "active" : "")" role="menuitem">
+                <i class="fa-solid fa-sliders"></i>
+                <span data-i18n="nav.restaurantSettings">Restaurant Settings</span>
+            </a>
+        </div>
+    }
+
+    <div class="app-layout" id="appLayout">
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- Sidebar (256px expanded -> 72px icon rail collapsed) -->
+        <aside class="app-sidebar" id="appSidebar" aria-label="Main navigation">
+            <!-- Row 1: Hotel Logo & Name -->
             <div class="sidebar-header">
-                <a class="sidebar-brand" href="/" title="Girana Garden">
-                    <div class="brand-logo-img" style="border-radius: 50% !important; background: #059669 !important; font-weight: 800; font-size: 1.25rem;">
-                        G
+                <a class="sidebar-brand" href="/" title="@restaurantName">
+                    <div class="brand-logo-circle" data-brand-logo-wrap>
+                        <img data-brand-logo-img src="@logoUrl" alt="@restaurantName" class="@(string.IsNullOrEmpty(logoUrl) ? "d-none" : "")" />
+                        <span data-brand-logo-fallback class="@(string.IsNullOrEmpty(logoUrl) ? "" : "d-none")">@initialChar</span>
                     </div>
-                    <span class="brand-text luxury-brand-title">Girana Garden</span>
+                    <span class="brand-text luxury-brand-title" data-brand-name title="@restaurantName">@restaurantName</span>
                 </a>
-                <button class="sidebar-toggle-btn" id="sidebarToggle" title="Expand Sidebar">
-                    <i class="fa-solid fa-angles-right" id="toggleIcon"></i>
+            </div>
+
+            <!-- Row 2: Transparent Panel-Left Toggle Directly Below Logo/Name -->
+            <div class="sidebar-toggle-row">
+                <button type="button"
+                        id="sidebarRailToggle"
+                        class="sidebar-rail-toggle-btn js-sidebar-toggle"
+                        aria-label="Toggle sidebar"
+                        data-i18n-aria="nav.toggleSidebar"
+                        aria-controls="appSidebar"
+                        aria-expanded="true">
+                    <!-- panel-left-close (when expanded) -->
+                    <svg class="js-panel-close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                        <path d="M9 3v18"></path>
+                        <path d="m16 15-3-3 3-3"></path>
+                    </svg>
+                    <!-- panel-left-open (when collapsed) -->
+                    <svg class="js-panel-open-icon d-none" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                        <path d="M9 3v18"></path>
+                        <path d="m14 9 3 3-3 3"></path>
+                    </svg>
                 </button>
             </div>
 
-            <!-- Sidebar Vertical Navigation Tabs Based on Role -->
+            <!-- Sidebar Navigation -->
             <nav class="sidebar-nav">
                 <div class="nav flex-column">
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")" href="/Dashboard" data-title="Dashboard" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
-                        <i class="fa-solid fa-chart-pie nav-icon" style="color: #10b981;"></i>
-                        <span class="nav-text">Dashboard</span>
+                    <a class="nav-link js-rail-item @(currentController == "Dashboard" ? "active" : "")"
+                       href="/Dashboard" data-i18n-title="nav.dashboard" title="Dashboard">
+                        <i class="fa-solid fa-chart-pie nav-icon"></i>
+                        <span class="nav-text" data-i18n="nav.dashboard">Dashboard</span>
                     </a>
+
+                    <div class="sidebar-group-heading" data-i18n="nav.serviceGroup">SERVICE</div>
+                    <hr class="sidebar-group-divider" />
 
                     @if (canViewTables)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Tables" ? "active" : "")" href="/Tables" data-title="Tables & Floor" data-bs-toggle="tooltip" data-bs-placement="right" title="Tables & Floor">
-                            <i class="fa-solid fa-chair nav-icon" style="color: #f59e0b;"></i>
-                            <span class="nav-text">Tables & Floor</span>
+                        <a class="nav-link js-rail-item @(currentController == "Tables" ? "active" : "")"
+                           href="/Tables" data-i18n-title="nav.tablesFloor" title="Tables &amp; Floor">
+                            <i class="fa-solid fa-chair nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.tablesFloor">Tables &amp; Floor</span>
                         </a>
                     }
 
                     @if (canTakeOrders)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "POS" ? "active" : "")" href="/Orders/POS" data-title="New POS Order" data-bs-toggle="tooltip" data-bs-placement="right" title="New POS Order">
-                            <i class="fa-solid fa-cash-register nav-icon" style="color: #6366f1;"></i>
-                            <span class="nav-text">New POS Order</span>
+                        <a class="nav-link js-rail-item @(currentController == "Orders" && currentAction == "POS" ? "active" : "")"
+                           href="/Orders/POS" data-i18n-title="nav.newPosOrder" title="New POS Order">
+                            <i class="fa-solid fa-cash-register nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.newPosOrder">New POS Order</span>
                         </a>
                     }
 
                     @if (canViewOrders)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Orders" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")" href="/Orders" data-title="All Orders" data-bs-toggle="tooltip" data-bs-placement="right" title="All Orders">
-                            <i class="fa-solid fa-receipt nav-icon" style="color: #0284c7;"></i>
-                            <span class="nav-text">All Orders</span>
+                        <a class="nav-link js-rail-item @(currentController == "Orders" && currentAction == "Index" ? "active" : "")"
+                           href="/Orders" data-i18n-title="nav.allOrders" title="All Orders">
+                            <i class="fa-solid fa-receipt nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.allOrders">All Orders</span>
                         </a>
                     }
 
                     @if (canViewKitchen)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Kitchen" ? "active" : "")" href="/Kitchen" data-title="Kitchen KDS" data-bs-toggle="tooltip" data-bs-placement="right" title="Kitchen (KDS)">
-                            <i class="fa-solid fa-kitchen-set nav-icon" style="color: #ef4444;"></i>
-                            <span class="nav-text">Kitchen (KDS)</span>
+                        <a class="nav-link js-rail-item @(currentController == "Kitchen" ? "active" : "")"
+                           href="/Kitchen" data-i18n-title="nav.kitchen" title="Kitchen">
+                            <i class="fa-solid fa-kitchen-set nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.kitchen">Kitchen</span>
                         </a>
                     }
 
                     @if (canViewBilling)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Billing" ? "active" : "")" href="/Billing" data-title="Billing & Payments" data-bs-toggle="tooltip" data-bs-placement="right" title="Billing & Payments">
-                            <i class="fa-solid fa-file-invoice-dollar nav-icon" style="color: #8b5cf6;"></i>
-                            <span class="nav-text">Billing & Payments</span>
+                        <a class="nav-link js-rail-item @(currentController == "Billing" ? "active" : "")"
+                           href="/Billing" data-i18n-title="nav.billingPayments" title="Billing &amp; Payments">
+                            <i class="fa-solid fa-file-invoice-dollar nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.billingPayments">Billing &amp; Payments</span>
                         </a>
                     }
 
+                    <div class="sidebar-group-heading" data-i18n="nav.manageGroup">MANAGE</div>
+                    <hr class="sidebar-group-divider" />
+
                     @if (canViewMenu)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Menu" ? "active" : "")" href="/Menu" data-title="Menu Items" data-bs-toggle="tooltip" data-bs-placement="right" title="Menu Items">
-                            <i class="fa-solid fa-bowl-food nav-icon" style="color: #0d9488;"></i>
-                            <span class="nav-text">Menu Items</span>
+                        <a class="nav-link js-rail-item @(currentController == "Menu" ? "active" : "")"
+                           href="/Menu" data-i18n-title="nav.menuItems" title="Menu Items">
+                            <i class="fa-solid fa-bowl-food nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.menuItems">Menu Items</span>
                         </a>
                     }
 
                     @if (canViewMasters)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Masters" ? "active" : "")" href="/Masters" data-title="Masters" data-bs-toggle="tooltip" data-bs-placement="right" title="Masters">
-                            <i class="fa-solid fa-layer-group nav-icon" style="color: #ec4899;"></i>
-                            <span class="nav-text">Masters</span>
+                        <a id="sidebarMastersLink"
+                           class="nav-link js-rail-item @(currentController == "Masters" && !isSettingsPage ? "active" : "") @(isSettingsPage ? "active-parent" : "")"
+                           href="/Masters" data-i18n-title="nav.masters" title="Masters">
+                            <i class="fa-solid fa-layer-group nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.masters">Masters</span>
                         </a>
+                        <div class="sidebar-sublink-list">
+                            <a class="nav-link sidebar-sublink @(isSettingsPage ? "active" : "")"
+                               href="/Masters/Settings" data-i18n-title="nav.restaurantSettings" title="Restaurant Settings">
+                                <i class="fa-solid fa-sliders nav-icon"></i>
+                                <span class="nav-text" data-i18n="nav.restaurantSettings">Restaurant Settings</span>
+                            </a>
+                        </div>
                     }
 
                     @if (canViewInventory)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Inventory" ? "active" : "")" href="/Inventory" data-title="Stock & Inventory" data-bs-toggle="tooltip" data-bs-placement="right" title="Stock & Inventory">
-                            <i class="fa-solid fa-boxes-stacked nav-icon" style="color: #64748b;"></i>
-                            <span class="nav-text">Stock</span>
+                        <a class="nav-link js-rail-item @(currentController == "Inventory" ? "active" : "")"
+                           href="/Inventory" data-i18n-title="nav.stock" title="Stock">
+                            <i class="fa-solid fa-boxes-stacked nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.stock">Stock</span>
                         </a>
                     }
 
                     @if (canViewStaff)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Staff" ? "active" : "")" href="/Staff" data-title="Staff & Attendance" data-bs-toggle="tooltip" data-bs-placement="right" title="Staff & Attendance">
-                            <i class="fa-solid fa-user-group nav-icon" style="color: #6366f1;"></i>
-                            <span class="nav-text">Staff & Attendance</span>
+                        <a class="nav-link js-rail-item @(currentController == "Staff" ? "active" : "")"
+                           href="/Staff" data-i18n-title="nav.staffAttendance" title="Staff &amp; Attendance">
+                            <i class="fa-solid fa-user-group nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.staffAttendance">Staff &amp; Attendance</span>
                         </a>
                     }
 
                     @if (canViewReports)
                     {
-                        <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Reports" ? "active" : "")" href="/Reports" data-title="Reports & Analytics" data-bs-toggle="tooltip" data-bs-placement="right" title="Reports & Analytics">
-                            <i class="fa-solid fa-chart-line nav-icon" style="color: #d97706;"></i>
-                            <span class="nav-text">Reports</span>
+                        <a class="nav-link js-rail-item @(currentController == "Reports" ? "active" : "")"
+                           href="/Reports" data-i18n-title="nav.reports" title="Reports">
+                            <i class="fa-solid fa-chart-line nav-icon"></i>
+                            <span class="nav-text" data-i18n="nav.reports">Reports</span>
                         </a>
                     }
-
-                    <div class="sidebar-divider my-2 border-top border-light-subtle"></div>
-
-                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Account" ? "active" : "")" href="/Account/Login?switchUser=true" data-title="Switch User" data-bs-toggle="tooltip" data-bs-placement="right" title="Switch User / Terminal">
-                        <i class="fa-solid fa-arrows-rotate nav-icon" style="color: #059669;"></i>
-                        <span class="nav-text">Switch User</span>
-                    </a>
-
-                    <a class="nav-link text-danger" href="/Account/Logout" onclick="window.location.href='/Account/Logout';" data-title="Sign Out" data-bs-toggle="tooltip" data-bs-placement="right" title="Sign Out">
-                        <i class="fa-solid fa-right-from-bracket nav-icon text-danger"></i>
-                        <span class="nav-text text-danger fw-semibold">Sign Out</span>
-                    </a>
                 </div>
             </nav>
         </aside>
 
         <!-- Main Content Area -->
         <div class="app-main">
-            @if (ViewContext.RouteData.Values["controller"]?.ToString() != "Dashboard")
+            @if (currentController != "Dashboard")
             {
-                <!-- Top Header Navbar -->
+                <!-- Top Header Navbar (Non-Dashboard Pages) -->
                 <header class="top-header sticky-top">
-                    <div class="d-flex align-items-center justify-content-between w-100">
-                        <div class="d-flex align-items-center gap-3">
-                            <button class="btn btn-outline-secondary btn-sm rounded-circle d-md-none" id="mobileSidebarToggle">
-                                <i class="fa-solid fa-bars"></i>
+                    <div class="d-flex align-items-center justify-content-between w-100 gap-2">
+                        <div class="d-flex align-items-center gap-3 min-width-0">
+                            <!-- Hamburger shown on mobile (<1024px) ONLY -->
+                            <button type="button"
+                                    class="mobile-hamburger-btn d-lg-none js-mobile-toggle"
+                                    aria-label="Toggle sidebar"
+                                    data-i18n-aria="nav.toggleSidebar"
+                                    aria-controls="appSidebar"
+                                    aria-expanded="false">
+                                <svg class="js-mobile-open-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                                    <path d="M9 3v18"></path>
+                                    <path d="m14 9 3 3-3 3"></path>
+                                </svg>
+                                <svg class="js-mobile-close-icon d-none" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
                             </button>
-                            <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-utensils text-success fs-4"></i>
-                                <span class="luxury-brand-title">Girana Garden</span>
+
+                            <a href="/" class="text-decoration-none d-flex align-items-center gap-2 min-width-0" title="@restaurantName">
+                                <div class="brand-logo-circle" style="width: 34px; height: 34px; min-width: 34px; font-size: 0.95rem;" data-brand-logo-wrap>
+                                    <img data-brand-logo-img src="@logoUrl" alt="@restaurantName" class="@(string.IsNullOrEmpty(logoUrl) ? "d-none" : "")" />
+                                    <span data-brand-logo-fallback class="@(string.IsNullOrEmpty(logoUrl) ? "" : "d-none")">@initialChar</span>
+                                </div>
+                                <span class="luxury-brand-title" data-brand-name title="@restaurantName">@restaurantName</span>
                             </a>
                         </div>
-                        
-                        <div class="d-flex align-items-center gap-3">
-                            <!-- Live Date & Time Clock with Thin Border -->
-                            <div class="live-clock-badge d-none d-md-flex" title="Current Local Time" style="border: 1.5px solid #cbd5e1;">
-                                <i class="fa-regular fa-clock text-success"></i>
-                                <span id="liveClockText">Loading...</span>
+
+                        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                            <div class="live-clock-badge d-none d-xl-flex">
+                                <i class="fa-regular fa-clock text-primary"></i>
+                                <span id="liveClockText" data-i18n="common.loading">Loading...</span>
                             </div>
 
-                            <!-- User & Role Dropdown -->
+                            <!-- Standalone Always-Visible Language Toggle -->
+                            <div class="lang-switcher-pill" role="group" aria-label="Language">
+                                <button type="button" class="lang-switch-btn" data-lang="en" onclick="I18n.setLanguage('en')">English</button>
+                                <button type="button" class="lang-switch-btn" data-lang="mr" onclick="I18n.setLanguage('mr')">मराठी</button>
+                            </div>
+
+                            <!-- Read-Only User Info + Sign Out Dropdown -->
                             <div class="dropdown">
-                                <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" title="Active User: @displayName">
-                                    <i class="fa-solid fa-user-shield text-success"></i>
-                                    <span>Role: <strong class="text-dark">@displayRole</strong></span>
+                                <button class="btn role-dropdown-btn btn-sm dropdown-toggle px-3 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" title="@displayName">
+                                    <i class="fa-solid fa-user-shield text-primary"></i>
+                                    <span><span data-i18n="header.role">Role</span>: <strong data-i18n-role="@displayRole">@displayRole</strong></span>
                                 </button>
-                                <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 210px; border-radius: 12px; border: 1.5px solid #cbd5e1;">
-                                    <li class="px-3 py-2 border-bottom bg-light rounded-top">
-                                        <div class="fw-bold text-dark small">@displayName</div>
-                                        <div class="text-muted small" style="font-size: 0.72rem;">@displayRole &bull; Girana RMS</div>
+                                <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 215px;">
+                                    <li class="px-3 py-2 border-bottom rounded-top" style="background: var(--surface-page);">
+                                        <div class="fw-bold small" style="color: var(--brand-900);" data-i18n-dynamic data-name-en="@displayName" data-name-mr="@displayNameMr">@displayName</div>
+                                        <div class="text-muted small" style="font-size: 0.78rem;">
+                                            <span data-i18n-role="@displayRole">@displayRole</span> &bull; <span data-brand-name>@restaurantName</span>
+                                        </div>
                                     </li>
-                                    <li><a class="dropdown-item @(displayRole == "Administrator" || displayRole == "Admin" ? "active" : "")" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
-                                    <li><a class="dropdown-item @(displayRole.Contains("Manager") ? "active" : "")" href="#"><i class="fa-solid fa-briefcase text-success me-2"></i> Manager</a></li>
-                                    <li><a class="dropdown-item @(displayRole.Contains("Cashier") ? "active" : "")" href="#"><i class="fa-solid fa-cash-register text-primary me-2"></i> Cashier</a></li>
-                                    <li><a class="dropdown-item @(displayRole.Contains("Waiter") ? "active" : "")" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
-                                    <li><a class="dropdown-item @(displayRole.Contains("Kitchen") ? "active" : "")" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
                                     <li><hr class="dropdown-divider my-1"></li>
-                                    <li>
-                                        <a class="dropdown-item small" href="/Account/Login?switchUser=true">
-                                            <i class="fa-solid fa-arrows-rotate text-secondary me-2"></i> Switch User / Terminal
-                                        </a>
-                                    </li>
                                     @if (isAuthenticated)
                                     {
                                         <li>
-                                            <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout" onclick="window.location.href='/Account/Logout';">
-                                                <i class="fa-solid fa-right-from-bracket me-2"></i> Sign Out
+                                            <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout">
+                                                <i class="fa-solid fa-right-from-bracket me-2"></i>
+                                                <span data-i18n="header.signOut">Sign Out</span>
                                             </a>
                                         </li>
                                     }
                                     else
                                     {
                                         <li>
-                                            <a class="dropdown-item small text-success fw-semibold" href="/Account/Login">
-                                                <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+                                            <a class="dropdown-item small fw-semibold" href="/Account/Login">
+                                                <i class="fa-solid fa-right-to-bracket me-2"></i>
+                                                <span data-i18n="header.signIn">Sign In</span>
                                             </a>
                                         </li>
                                     }
@@ -231,13 +332,17 @@
             }
 
             <!-- Main Body Container -->
-            <main role="main" class="main-content py-4 px-4">
+            <main role="main" class="main-content py-4 px-3 px-md-4">
                 @RenderBody()
             </main>
 
             <!-- Global Footer -->
-            <footer class="app-footer text-center text-secondary py-3 border-top mt-auto" style="font-size: 0.85rem; background: #ffffff;">
-                <div>Girana Garden Restaurant Management System &bull; Clean Architecture .NET 10 MVC + Web API</div>
+            <footer class="app-footer text-center text-secondary py-3 border-top mt-auto" style="font-size: 0.875rem; background: var(--surface-card); border-color: var(--border-color) !important;">
+                <div>
+                    <span data-brand-name>@restaurantName</span><span data-brand-tagline>@(string.IsNullOrWhiteSpace(setting.Tagline) ? "" : " · " + setting.Tagline)</span>
+                    &bull;
+                    <span data-i18n="app.footer">Clean Architecture .NET 9 MVC + Web API</span>
+                </div>
             </footer>
         </div>
     </div>
@@ -246,99 +351,232 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="~/js/i18n.js" asp-append-version="true"></script>
     <script>
+        (function () {
+            const enDict = @Html.Raw(enDictJson);
+            const mrDict = @Html.Raw(mrDictJson);
+            I18n.init(enDict, mrDict, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(preferredLang)));
+            RmsUI.applyRestaurantBranding(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+                restaurantName = restaurantName,
+                restaurantNameMr = restaurantNameMr,
+                tagline = setting.Tagline ?? "",
+                taglineMr = setting.TaglineMr ?? "",
+                fullAddress = RestaurantManagement.Application.Services.RestaurantSettingsService.BuildFormattedAddress(setting),
+                addressMr = setting.AddressMr ?? "",
+                logoUrl = logoUrl
+            })));
+        })();
+
         document.addEventListener('DOMContentLoaded', function () {
-            // Live Clock Script
+            I18n.applyTranslations(document);
+
             function updateClock() {
-                const now = new Date();
                 const clockElem = document.getElementById('liveClockText');
                 if (clockElem) {
-                    const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                    clockElem.textContent = `${dateStr}  |  ${timeStr}`;
+                    clockElem.textContent = I18n.formatDateTime(new Date(), {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    });
                 }
             }
             setInterval(updateClock, 1000);
             updateClock();
+            I18n.onLanguageChange(updateClock);
 
-            // Collapsible Sidebar Script
-            const sidebar = document.getElementById('appSidebar');
+            // Sidebar 72px Icon Rail (desktop) + Mobile Overlay Drawer (<1024px)
             const layout = document.getElementById('appLayout');
-            const toggleBtn = document.getElementById('sidebarToggle');
-            const toggleIcon = document.getElementById('toggleIcon');
-            const mobileToggle = document.getElementById('mobileSidebarToggle');
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const desktopToggle = document.getElementById('sidebarRailToggle');
+            const mobileToggles = document.querySelectorAll('.js-mobile-toggle');
+            const floatingTooltip = document.getElementById('railFloatingTooltip');
+            const mastersLink = document.getElementById('sidebarMastersLink');
+            const mastersFlyout = document.getElementById('mastersRailFlyout');
+            const MOBILE_BREAKPOINT = 1024;
 
-            let isCollapsed = true;
+            function isMobileView() {
+                return window.innerWidth < MOBILE_BREAKPOINT;
+            }
 
-            function updateSidebarState() {
-                if (isCollapsed) {
-                    sidebar.classList.add('sidebar-collapsed');
-                    layout.classList.add('layout-collapsed');
-                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-right';
-                    if (toggleBtn) toggleBtn.setAttribute('title', 'Expand Sidebar');
+            function isDesktopCollapsed() {
+                return !isMobileView() && layout.classList.contains('sidebar-collapsed');
+            }
+
+            function syncToggleUI() {
+                const collapsed = layout.classList.contains('sidebar-collapsed');
+                if (desktopToggle) {
+                    desktopToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                    const closeIcon = desktopToggle.querySelector('.js-panel-close-icon');
+                    const openIcon = desktopToggle.querySelector('.js-panel-open-icon');
+                    if (closeIcon && openIcon) {
+                        closeIcon.classList.toggle('d-none', collapsed);
+                        openIcon.classList.toggle('d-none', !collapsed);
+                    }
+                }
+                const mobileOpen = layout.classList.contains('mobile-sidebar-open');
+                mobileToggles.forEach(function (btn) {
+                    btn.setAttribute('aria-expanded', mobileOpen ? 'true' : 'false');
+                    const openIcon = btn.querySelector('.js-mobile-open-icon');
+                    const closeIcon = btn.querySelector('.js-mobile-close-icon');
+                    if (openIcon && closeIcon) {
+                        openIcon.classList.toggle('d-none', mobileOpen);
+                        closeIcon.classList.toggle('d-none', !mobileOpen);
+                    }
+                });
+            }
+
+            function applyInitialSidebarState() {
+                if (isMobileView()) {
+                    layout.classList.remove('sidebar-collapsed', 'mobile-sidebar-open');
                 } else {
-                    sidebar.classList.remove('sidebar-collapsed');
-                    layout.classList.remove('layout-collapsed');
-                    if (toggleIcon) toggleIcon.className = 'fa-solid fa-angles-left';
-                    if (toggleBtn) toggleBtn.setAttribute('title', 'Collapse Sidebar');
+                    layout.classList.remove('mobile-sidebar-open');
+                    let collapsed = false;
+                    try {
+                        collapsed = localStorage.getItem('rms_sidebar_collapsed') === 'true';
+                    } catch (e) { }
+                    layout.classList.toggle('sidebar-collapsed', collapsed);
                 }
+                syncToggleUI();
             }
 
-            if (toggleBtn) {
-                toggleBtn.addEventListener('click', function () {
-                    isCollapsed = !isCollapsed;
-                    updateSidebarState();
+            function toggleDesktopSidebar() {
+                const nextCollapsed = !layout.classList.contains('sidebar-collapsed');
+                layout.classList.toggle('sidebar-collapsed', nextCollapsed);
+                try {
+                    localStorage.setItem('rms_sidebar_collapsed', nextCollapsed ? 'true' : 'false');
+                } catch (e) { }
+                hideRailTooltip();
+                hideMastersFlyout();
+                syncToggleUI();
+            }
+
+            function setMobileSidebarOpen(open) {
+                layout.classList.toggle('mobile-sidebar-open', open);
+                syncToggleUI();
+            }
+
+            if (desktopToggle) {
+                desktopToggle.addEventListener('click', toggleDesktopSidebar);
+                desktopToggle.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleDesktopSidebar();
+                    }
                 });
             }
 
-            if (mobileToggle) {
-                mobileToggle.addEventListener('click', function () {
-                    sidebar.classList.toggle('mobile-open');
+            mobileToggles.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    setMobileSidebarOpen(!layout.classList.contains('mobile-sidebar-open'));
                 });
+                btn.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setMobileSidebarOpen(!layout.classList.contains('mobile-sidebar-open'));
+                    }
+                });
+            });
+
+            if (backdrop) {
+                backdrop.addEventListener('click', function () { setMobileSidebarOpen(false); });
             }
 
-            updateSidebarState();
-
-            // Initialize all Bootstrap 5 tooltips across the application
-            function initTooltips() {
-                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl, { trigger: 'hover' });
-                });
-            }
-            initTooltips();
-
-            // Interactive Role Switcher
-            document.addEventListener('click', function (e) {
-                const item = e.target.closest('.role-dropdown-menu .dropdown-item');
-                if (!item) return;
-
-                const href = item.getAttribute('href');
-                // Allow direct navigation for real URLs (e.g. /Account/Logout, /Account/Login)
-                if (href && href !== '#' && !href.startsWith('javascript:')) {
-                    return;
-                }
-
-                e.preventDefault();
-                const dropdown = item.closest('.dropdown');
-                if (dropdown) {
-                    dropdown.querySelectorAll('.dropdown-item').forEach(function (el) {
-                        el.classList.remove('active');
-                        const icon = el.querySelector('i');
-                        if (icon) {
-                            icon.classList.remove('text-white');
+            if (sidebar) {
+                sidebar.querySelectorAll('.nav-link').forEach(function (link) {
+                    link.addEventListener('click', function (e) {
+                        if (link === mastersLink && isDesktopCollapsed() && mastersFlyout) {
+                            e.preventDefault();
+                            toggleMastersFlyout();
+                            return;
+                        }
+                        if (isMobileView()) {
+                            setMobileSidebarOpen(false);
                         }
                     });
-                    item.classList.add('active');
-                    const activeIcon = item.querySelector('i');
-                    if (activeIcon) {
-                        activeIcon.classList.add('text-white');
-                    }
-                    const roleBtnLabel = dropdown.querySelector('.role-dropdown-btn strong');
-                    if (roleBtnLabel) {
-                        roleBtnLabel.textContent = item.textContent.trim();
+                });
+            }
+
+            // Collapsed 72px rail hover/focus tooltips
+            function showRailTooltip(el) {
+                if (!isDesktopCollapsed() || !floatingTooltip) return;
+                if (el === mastersLink && mastersFlyout && !mastersFlyout.classList.contains('d-none')) return;
+                const text = el.getAttribute('data-tooltip') || el.getAttribute('title') || '';
+                if (!text) return;
+                const rect = el.getBoundingClientRect();
+                floatingTooltip.textContent = text;
+                floatingTooltip.classList.remove('d-none');
+                floatingTooltip.style.left = (rect.right + 10) + 'px';
+                floatingTooltip.style.top = (rect.top + rect.height / 2 - floatingTooltip.offsetHeight / 2) + 'px';
+            }
+
+            function hideRailTooltip() {
+                if (floatingTooltip) floatingTooltip.classList.add('d-none');
+            }
+
+            // Collapsed Masters Flyout
+            let flyoutTimer = null;
+            function showMastersFlyout() {
+                if (!isDesktopCollapsed() || !mastersLink || !mastersFlyout) return;
+                clearTimeout(flyoutTimer);
+                hideRailTooltip();
+                const rect = mastersLink.getBoundingClientRect();
+                mastersFlyout.classList.remove('d-none');
+                mastersFlyout.style.left = (rect.right + 8) + 'px';
+                mastersFlyout.style.top = Math.min(window.innerHeight - mastersFlyout.offsetHeight - 12, rect.top) + 'px';
+            }
+
+            function hideMastersFlyout() {
+                if (mastersFlyout) mastersFlyout.classList.add('d-none');
+            }
+
+            function scheduleHideFlyout() {
+                clearTimeout(flyoutTimer);
+                flyoutTimer = setTimeout(hideMastersFlyout, 180);
+            }
+
+            function toggleMastersFlyout() {
+                if (!mastersFlyout) return;
+                if (mastersFlyout.classList.contains('d-none')) showMastersFlyout();
+                else hideMastersFlyout();
+            }
+
+            if (mastersLink && mastersFlyout) {
+                mastersLink.addEventListener('mouseenter', showMastersFlyout);
+                mastersLink.addEventListener('focus', showMastersFlyout);
+                mastersLink.addEventListener('mouseleave', scheduleHideFlyout);
+                mastersFlyout.addEventListener('mouseenter', function () { clearTimeout(flyoutTimer); });
+                mastersFlyout.addEventListener('mouseleave', scheduleHideFlyout);
+            }
+
+            document.querySelectorAll('.js-rail-item').forEach(function (item) {
+                if (item === mastersLink) return;
+                item.addEventListener('mouseenter', function () { showRailTooltip(item); });
+                item.addEventListener('focus', function () { showRailTooltip(item); });
+                item.addEventListener('mouseleave', hideRailTooltip);
+                item.addEventListener('blur', hideRailTooltip);
+            });
+
+            document.addEventListener('click', function (e) {
+                if (mastersFlyout && !mastersFlyout.classList.contains('d-none')) {
+                    if (!mastersFlyout.contains(e.target) && !mastersLink.contains(e.target)) {
+                        hideMastersFlyout();
                     }
                 }
+            });
+
+            window.addEventListener('resize', applyInitialSidebarState);
+            applyInitialSidebarState();
+
+            // Bootstrap tooltips for non-sidebar buttons
+            [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(function (el) {
+                new bootstrap.Tooltip(el, { trigger: 'hover' });
             });
         });
     </script>

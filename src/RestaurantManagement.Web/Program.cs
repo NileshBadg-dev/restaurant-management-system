@@ -5,6 +5,7 @@ using RestaurantManagement.Application.Services;
 using RestaurantManagement.Infrastructure.Data;
 using RestaurantManagement.Infrastructure.DbContext;
 using RestaurantManagement.Infrastructure.Repositories;
+using RestaurantManagement.Web.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,8 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateLogger();
 builder.Host.UseSerilog();
+
+builder.Services.AddMemoryCache();
 
 // Add DbContext
 builder.Services.AddDbContext<RestaurantDbContext>(options =>
@@ -35,6 +38,8 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IRestaurantSettingsService, RestaurantSettingsService>();
+builder.Services.AddSingleton<IWebConfigCacheService, WebConfigCacheService>();
 
 // Cookie Authentication for Web MVC
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

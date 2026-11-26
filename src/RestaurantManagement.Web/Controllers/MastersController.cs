@@ -2,38 +2,57 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.DTOs;
 using RestaurantManagement.Application.Interfaces;
+using RestaurantManagement.Application.Services;
 using RestaurantManagement.Domain.Entities;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
 [Authorize(Roles = "Admin,Manager")]
 public class MastersController : Controller
 {
+    private static readonly HashSet<string> AllowedLogoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".svg", ".webp"
+    };
+
+    private static readonly HashSet<string> AllowedLogoContentTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/png", "image/jpeg", "image/jpg", "image/svg+xml", "image/webp"
+    };
+
+    private const long MaxLogoSizeBytes = 1024 * 1024; // 1 MB
+
     private readonly ITableService _tableService;
     private readonly IMenuService _menuService;
     private readonly IStaffService _staffService;
     private readonly IInventoryService _inventoryService;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IRestaurantSettingsService _settingsService;
+    private readonly IWebConfigCacheService _configCache;
+    private readonly IWebHostEnvironment _env;
 
     public MastersController(
         ITableService tableService, 
         IMenuService menuService, 
         IStaffService staffService,
         IInventoryService inventoryService,
-        IUnitOfWork unitOfWork)
+        IRestaurantSettingsService settingsService,
+        IWebConfigCacheService configCache,
+        IWebHostEnvironment env)
     {
         _tableService = tableService;
         _menuService = menuService;
         _staffService = staffService;
         _inventoryService = inventoryService;
-        _unitOfWork = unitOfWork;
+        _settingsService = settingsService;
+        _configCache = configCache;
+        _env = env;
     }
 
     public async Task<IActionResult> Index(string tab = "floor", string? returnUrl = null, bool openAdd = false)
     {
-        var settings = await _unitOfWork.RestaurantSettings.GetAllAsync();
-        var setting = settings.FirstOrDefault() ?? new RestaurantSetting();
+        var setting = await _configCache.GetSettingsAsync();
 
         var model = new MastersViewModel
         {
@@ -49,7 +68,13 @@ public class MastersController : Controller
             Setting = setting
         };
 
-        return View(model);
+        return View("Index", model);
+    }
+
+    [HttpGet]
+    public Task<IActionResult> Settings()
+    {
+        return Index(tab: "settings");
     }
 
     // ================= Floor Operations =================
@@ -259,44 +284,96 @@ public class MastersController : Controller
 
     // ================= Restaurant Settings Operations =================
     [HttpPost]
-    public async Task<IActionResult> UpdateSettings(RestaurantSetting updated)
+    public async Task<IActionResult> UpdateRestaurantConfig([FromForm] RestaurantConfigUpdateDto dto, IFormFile? logoFile)
     {
-        var settings = await _unitOfWork.RestaurantSettings.GetAllAsync();
-        var setting = settings.FirstOrDefault();
-        if (setting == null)
+        if (string.IsNullOrWhiteSpace(dto.RestaurantName))
         {
-            setting = updated;
-            await _unitOfWork.RestaurantSettings.AddAsync(setting);
-        }
-        else
-        {
-            setting.RestaurantName = updated.RestaurantName;
-            setting.Address = updated.Address;
-            setting.Phone = updated.Phone;
-            setting.Email = updated.Email;
-            setting.GSTIN = updated.GSTIN;
-            setting.CurrencySymbol = updated.CurrencySymbol;
-            setting.CGSTPercentage = updated.CGSTPercentage;
-            setting.SGSTPercentage = updated.SGSTPercentage;
-            setting.ServiceChargePercentage = updated.ServiceChargePercentage;
-            setting.KitchenMode = updated.KitchenMode;
-            setting.TrackReadyStatus = updated.TrackReadyStatus;
-            setting.AutoMarkServedMinutes = updated.AutoMarkServedMinutes;
-            setting.VoidApproval = updated.VoidApproval;
-            setting.AllowBillingWithUnservedItems = updated.AllowBillingWithUnservedItems;
-            setting.KitchenLiteScreen = updated.KitchenLiteScreen;
-            setting.SinglePersonMode = updated.SinglePersonMode;
-            setting.DraftExpiryHours = updated.DraftExpiryHours;
-            setting.PackagingCharge = updated.PackagingCharge;
-            setting.DeliveryCharge = updated.DeliveryCharge;
-            if (!string.IsNullOrWhiteSpace(updated.ManagerPIN)) setting.ManagerPIN = updated.ManagerPIN;
-            setting.UpdatedAt = DateTime.UtcNow;
-            await _unitOfWork.RestaurantSettings.UpdateAsync(setting);
+            return BadRequest(new { success = false, messageKey = "validation.restaurantNameRequired", message = "Restaurant name is required." });
         }
 
-        await _unitOfWork.SaveChangesAsync();
+        if (!string.IsNullOrWhiteSpace(dto.PinCode) && !System.Text.RegularExpressions.Regex.IsMatch(dto.PinCode.Trim(), @"^[A-Za-z0-9\-\s]{4,10}$"))
+        {
+            return BadRequest(new { success = false, messageKey = "validation.pinInvalid", message = "Please enter a valid PIN code (4 to 10 digits)." });
+        }
+
+        var currentSetting = await _settingsService.GetSettingsAsync();
+        string? newLogoUrl = null;
+
+        if (logoFile != null && logoFile.Length > 0)
+        {
+            if (logoFile.Length > MaxLogoSizeBytes)
+            {
+                return BadRequest(new { success = false, messageKey = "validation.logoTooLarge", message = "Logo file size must not exceed 1 MB." });
+            }
+
+            var ext = Path.GetExtension(logoFile.FileName);
+            if (string.IsNullOrEmpty(ext) || !AllowedLogoExtensions.Contains(ext) ||
+                (!string.IsNullOrEmpty(logoFile.ContentType) && !AllowedLogoContentTypes.Contains(logoFile.ContentType)))
+            {
+                return BadRequest(new { success = false, messageKey = "validation.logoInvalidType", message = "Logo must be a PNG, JPG, SVG, or WebP image." });
+            }
+
+            var uploadsDir = Path.Combine(_env.WebRootPath, "uploads");
+            Directory.CreateDirectory(uploadsDir);
+
+            var fileName = $"logo_{Guid.NewGuid():N}{ext.ToLowerInvariant()}";
+            var filePath = Path.Combine(uploadsDir, fileName);
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await logoFile.CopyToAsync(stream);
+            }
+
+            DeleteUploadedLogoIfLocal(currentSetting.LogoUrl);
+            newLogoUrl = $"/uploads/{fileName}";
+            dto.RemoveLogo = false;
+        }
+        else if (dto.RemoveLogo)
+        {
+            DeleteUploadedLogoIfLocal(currentSetting.LogoUrl);
+        }
+
+        dto.LogoUrl = newLogoUrl;
+        var saved = await _settingsService.UpdateRestaurantConfigAsync(dto);
+        _configCache.InvalidateSettings();
+
+        var publicDto = RestaurantSettingsService.MapToPublicDto(saved);
+        return Json(new
+        {
+            success = true,
+            messageKey = "toast.settingsSaved",
+            message = "Restaurant settings saved successfully.",
+            settings = publicDto
+        });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateSettings(RestaurantSetting updated)
+    {
+        if (string.IsNullOrWhiteSpace(updated.RestaurantName))
+        {
+            TempData["Error"] = "Restaurant name is required.";
+            return RedirectToAction(nameof(Index), new { tab = "settings" });
+        }
+
+        await _settingsService.UpdateFullSettingsAsync(updated);
+        _configCache.InvalidateSettings();
         TempData["Success"] = "Restaurant settings & tax configuration saved successfully.";
         return RedirectToAction(nameof(Index), new { tab = "settings" });
+    }
+
+    private void DeleteUploadedLogoIfLocal(string? logoUrl)
+    {
+        if (string.IsNullOrWhiteSpace(logoUrl) || !logoUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var relative = logoUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var fullPath = Path.Combine(_env.WebRootPath, relative);
+        if (System.IO.File.Exists(fullPath))
+        {
+            System.IO.File.Delete(fullPath);
+        }
     }
 
     // ================= Inventory Stock Adjustment =================

@@ -137,6 +137,7 @@ public class LowStockDto
 public class TopSellingItemDto
 {
     public string MenuItemName { get; set; } = string.Empty;
+    public string? MenuItemNameMr { get; set; }
     public string CategoryName { get; set; } = string.Empty;
     public int TotalQuantitySold { get; set; }
     public decimal TotalRevenue { get; set; }

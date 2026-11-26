@@ -19,14 +19,12 @@ public class WorkedExampleTable04Tests
 
         var context = new RestaurantDbContext(options);
 
-        // Seed Setting: Mode 2, 5% GST (2.5% + 2.5%)
+        // Seed Setting: 5% GST (2.5% + 2.5%)
         context.RestaurantSettings.Add(new RestaurantSetting
         {
-            RestaurantName = "Girana Garden",
+            RestaurantName = "Hotel Kumbharwada",
             CGSTPercentage = 2.5m,
-            SGSTPercentage = 2.5m,
-            KitchenMode = KitchenMode.PrinterOnly,
-            TrackReadyStatus = false
+            SGSTPercentage = 2.5m
         });
 
         // Floor & Table 04 (6 seats)

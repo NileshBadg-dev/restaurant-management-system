@@ -1,6 +1,7 @@
 @model IEnumerable<InventoryItemDto>
 @{
     ViewData["Title"] = "Inventory & Stock";
+    ViewData["TitleKey"] = "inventory.title";
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
@@ -8,22 +9,22 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-1 fs-6">
                 <li class="breadcrumb-item">
-                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success">
-                        <i class="fa-solid fa-chart-pie me-1" data-bs-toggle="tooltip" title="Dashboard"></i> Dashboard
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold" style="color: var(--brand-600);">
+                        <i class="fa-solid fa-chart-pie me-1"></i> <span data-i18n="nav.dashboard">Dashboard</span>
                     </a>
                 </li>
                 <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
-                    <i class="fa-solid fa-boxes-stacked text-info me-1"></i> Inventory & Stock
+                    <i class="fa-solid fa-boxes-stacked me-1" style="color: var(--brand-600);"></i> <span data-i18n="inventory.title">Inventory &amp; Stock</span>
                 </li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-0 text-dark">
-            <i class="fa-solid fa-boxes-stacked text-info me-2"></i>Inventory & Stock
+        <h2 class="fw-bold mb-0" style="color: var(--brand-900);">
+            <i class="fa-solid fa-boxes-stacked me-2" style="color: var(--brand-600);"></i><span data-i18n="inventory.title">Inventory &amp; Stock</span>
         </h2>
     </div>
     <div>
-        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to Dashboard">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> <span data-i18n="header.backToDashboard">Back to Dashboard</span>
         </a>
     </div>
 </div>
@@ -48,13 +49,13 @@
         <table class="table app-datagrid align-middle">
             <thead>
                 <tr>
-                    <th>Ingredient Item</th>
-                    <th>Category</th>
-                    <th>Current Stock</th>
-                    <th>Minimum Level</th>
-                    <th>Unit Cost</th>
-                    <th>Status</th>
-                    <th class="text-end">Actions</th>
+                    <th data-i18n="inventory.ingredient">Ingredient Item</th>
+                    <th data-i18n="menu.category">Category</th>
+                    <th data-i18n="inventory.currentStock">Current Stock</th>
+                    <th data-i18n="inventory.minLevel">Minimum Level</th>
+                    <th data-i18n="inventory.unitCost">Unit Cost</th>
+                    <th data-i18n="menu.status">Status</th>
+                    <th class="text-end" data-i18n="common.actions">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,28 +64,28 @@
                     <tr>
                         <td class="fw-bold text-dark">@item.Name</td>
                         <td><span class="badge bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle rounded-pill px-3 py-1">@item.Category</span></td>
-                        <td class="fw-bold fs-6 @(item.IsLowStock ? "text-danger" : "text-success")">
-                            @item.CurrentStock @item.Unit
+                        <td class="fw-bold fs-6" style="color: @(item.IsLowStock ? "#991B1B" : "var(--leaf)");">
+                            <span data-locale-number="@item.CurrentStock">@item.CurrentStock</span> @item.Unit
                         </td>
-                        <td class="small text-secondary">@item.MinimumStock @item.Unit</td>
-                        <td class="text-dark">₹@item.UnitCost.ToString("N0") / @item.Unit</td>
+                        <td class="small text-secondary"><span data-locale-number="@item.MinimumStock">@item.MinimumStock</span> @item.Unit</td>
+                        <td class="text-dark"><span data-locale-currency="@item.UnitCost">₹@item.UnitCost.ToString("N0")</span> / @item.Unit</td>
                         <td>
                             @if (item.CurrentStock <= (item.MinimumStock / 2m))
                             {
-                                <span class="badge bg-danger px-3 py-1 rounded-pill"><i class="fa-solid fa-circle-exclamation me-1"></i> Critical Low</span>
+                                <span class="badge bg-danger px-3 py-1 rounded-pill"><i class="fa-solid fa-circle-exclamation me-1"></i> <span data-i18n="inventory.criticalLow">Critical Low</span></span>
                             }
                             else if (item.IsLowStock)
                             {
-                                <span class="badge bg-warning text-dark px-3 py-1 rounded-pill"><i class="fa-solid fa-triangle-exclamation me-1"></i> Low Stock</span>
+                                <span class="badge bg-warning text-dark px-3 py-1 rounded-pill"><i class="fa-solid fa-triangle-exclamation me-1"></i> <span data-i18n="inventory.lowStock">Low Stock</span></span>
                             }
                             else
                             {
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1"><i class="fa-solid fa-circle-check me-1"></i> Optimal</span>
+                                <span class="badge status-pill-available px-3 py-1 rounded-pill"><i class="fa-solid fa-circle-check me-1"></i> <span data-i18n="inventory.optimal">Optimal</span></span>
                             }
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-info rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#adjustModal-@item.Id">
-                                <i class="fa-solid fa-sliders me-1"></i> Adjust Stock
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#adjustModal-@item.Id">
+                                <i class="fa-solid fa-sliders me-1"></i> <span data-i18n="masters.adjustStock">Adjust Stock</span>
                             </button>
                         </td>
                     </tr>

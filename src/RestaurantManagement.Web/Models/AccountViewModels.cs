@@ -4,22 +4,26 @@ namespace RestaurantManagement.Web.Models;
 
 public class LoginViewModel
 {
-    [Required(ErrorMessage = "Please enter your username")]
-    public string Username { get; set; } = "manager";
+    [Required(ErrorMessage = "Please enter your User ID")]
+    public string Username { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Please enter your password")]
     [DataType(DataType.Password)]
-    public string Password { get; set; } = "manager123";
+    public string Password { get; set; } = string.Empty;
 
     public bool RememberMe { get; set; } = true;
     public string? ReturnUrl { get; set; }
 
-    // Lean Branding & Mode Info
-    public string RestaurantName { get; set; } = "Girana Garden Fine Dine & Bar";
-    public string KitchenModeName { get; set; } = "Mode 2: Printer Only";
+    // Lean Branding Info
+    public string RestaurantName { get; set; } = "Hotel Kumbharwada";
+    public string? RestaurantNameMr { get; set; } = "हॉटेल कुंभारवाडा";
+    public string Tagline { get; set; } = "Authentic Village Dining & Hospitality";
+    public string LogoUrl { get; set; } = "/assets/hotel-logo.jpg";
+    public string PreferredLanguage { get; set; } = "en";
 
     // Flash Messages
     public string? ErrorMessage { get; set; }
+    public string? ErrorKey { get; set; }
     public string? SuccessMessage { get; set; }
 }
 

@@ -22,9 +22,11 @@ public class UserDto
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
+    public string? FullNameMr { get; set; }
     public string Phone { get; set; } = string.Empty;
     public UserRole Role { get; set; }
     public string RoleName => Role.ToString();
+    public string PreferredLanguage { get; set; } = "en";
     public bool IsActive { get; set; }
     public DateTime? LastLogin { get; set; }
 }

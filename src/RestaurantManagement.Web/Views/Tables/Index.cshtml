@@ -1,6 +1,7 @@
 @model IEnumerable<FloorDto>
 @{
     ViewData["Title"] = "Table & Floor Management";
+    ViewData["TitleKey"] = "nav.tablesFloor";
     int totalTables = Model.Sum(f => f.Tables.Count);
     int availableCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Available));
     int occupiedCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Occupied));
@@ -8,37 +9,37 @@
     int billingCount = Model.Sum(f => f.Tables.Count(t => t.Status == TableStatus.Billing));
 }
 
-<!-- Breadcrumb & Top Bar (Description removed) -->
+<!-- Breadcrumb & Top Bar -->
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 animated-fade-in">
     <div>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-1 fs-6">
                 <li class="breadcrumb-item">
-                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success" data-bs-toggle="tooltip" title="Return to Dashboard">
-                        <i class="fa-solid fa-chart-pie me-1"></i> Dashboard
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold" style="color: var(--brand-600);">
+                        <i class="fa-solid fa-chart-pie me-1"></i> <span data-i18n="nav.dashboard">Dashboard</span>
                     </a>
                 </li>
                 <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
-                    <i class="fa-solid fa-chair text-warning me-1"></i> Tables & Floor Plan
+                    <i class="fa-solid fa-chair me-1" style="color: var(--brand-600);"></i> <span data-i18n="nav.tablesFloor">Tables &amp; Floor</span>
                 </li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-0 text-dark">
-            <i class="fa-solid fa-chair text-warning me-2" data-bs-toggle="tooltip" title="Dining Floor and Table Layout"></i>Table & Floor Management
+        <h2 class="fw-bold mb-0" style="color: var(--brand-900);">
+            <i class="fa-solid fa-chair me-2" style="color: var(--brand-600);"></i><span data-i18n="table.management">Table &amp; Floor Management</span>
         </h2>
     </div>
     <div class="d-flex flex-wrap gap-2">
-        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Return to main dashboard">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> <span data-i18n="header.backToDashboard">Back to Dashboard</span>
         </a>
-        <button class="btn btn-outline-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#transferModal" title="Transfer active order between tables">
-            <i class="fa-solid fa-arrow-right-arrow-left me-1"></i> Transfer Table
+        <button class="btn btn-outline-primary rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#transferModal">
+            <i class="fa-solid fa-arrow-right-arrow-left me-1"></i> <span data-i18n="table.transferTable">Transfer Table</span>
         </button>
-        <button class="btn btn-outline-warning rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#mergeModal" title="Merge orders from two tables">
-            <i class="fa-solid fa-code-merge me-1"></i> Merge Tables
+        <button class="btn btn-outline-warning rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#mergeModal">
+            <i class="fa-solid fa-code-merge me-1"></i> <span data-i18n="table.mergeTables">Merge Tables</span>
         </button>
-        <a href="/Masters?tab=table" class="btn btn-primary rounded-pill px-3 shadow-sm" title="Configure tables in Masters">
-            <i class="fa-solid fa-gear me-1"></i> Configure Tables
+        <a href="/Masters?tab=table" class="btn btn-primary rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-gear me-1"></i> <span data-i18n="table.configureTables">Configure Tables</span>
         </a>
     </div>
 </div>
@@ -67,41 +68,41 @@
                 <span class="input-group-text bg-white border-end-0 text-muted">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </span>
-                <input type="text" id="tableFilterInput" class="form-control border-start-0 ps-0" placeholder="Search table # or seats..." onkeyup="filterTableCards()" />
+                <input type="text" id="tableFilterInput" class="form-control border-start-0 ps-0" placeholder="Search table # or seats..." data-i18n-placeholder="table.searchPlaceholder" onkeyup="filterTableCards()" />
             </div>
         </div>
 
         <!-- Status Filter Buttons Strip -->
         <div class="col-lg-5 col-md-8">
-            <div class="btn-group btn-group-sm w-100" role="group">
-                <button class="btn btn-outline-secondary status-pill-btn active" onclick="filterByStatus('all', this)">
-                    All (@totalTables)
+            <div class="d-flex flex-wrap gap-1" role="group">
+                <button class="btn btn-sm btn-outline-secondary status-pill-btn active" onclick="filterByStatus('all', this)">
+                    <span data-i18n="table.allTables">All</span> (<span data-locale-number="@totalTables">@totalTables</span>)
                 </button>
-                <button class="btn btn-outline-success status-pill-btn" onclick="filterByStatus('available', this)">
-                    Available (@availableCount)
+                <button class="btn btn-sm btn-outline-primary status-pill-btn" onclick="filterByStatus('available', this)">
+                    <span data-i18n="table.available">Available</span> (<span data-locale-number="@availableCount">@availableCount</span>)
                 </button>
-                <button class="btn btn-outline-warning status-pill-btn" onclick="filterByStatus('occupied', this)">
-                    Occupied (@occupiedCount)
+                <button class="btn btn-sm btn-outline-warning status-pill-btn" onclick="filterByStatus('occupied', this)">
+                    <span data-i18n="table.occupied">Occupied</span> (<span data-locale-number="@occupiedCount">@occupiedCount</span>)
                 </button>
-                <button class="btn btn-outline-primary status-pill-btn" onclick="filterByStatus('reserved', this)">
-                    Reserved (@reservedCount)
+                <button class="btn btn-sm btn-outline-primary status-pill-btn" onclick="filterByStatus('reserved', this)">
+                    <span data-i18n="table.reserved">Reserved</span> (<span data-locale-number="@reservedCount">@reservedCount</span>)
                 </button>
-                <button class="btn btn-outline-purple status-pill-btn" onclick="filterByStatus('billing', this)" style="color:#7c3aed; border-color:#ddd6fe;">
-                    Billing (@billingCount)
+                <button class="btn btn-sm btn-outline-secondary status-pill-btn" onclick="filterByStatus('billing', this)">
+                    <span data-i18n="table.billing">Billing</span> (<span data-locale-number="@billingCount">@billingCount</span>)
                 </button>
             </div>
         </div>
 
         <!-- Floor Filter Tabs -->
         <div class="col-lg-4 col-md-12 text-lg-end">
-            <div class="d-inline-flex gap-1 overflow-auto">
+            <div class="d-inline-flex flex-wrap gap-1 max-w-100">
                 <button class="btn btn-sm btn-primary rounded-pill px-3 floor-nav-btn active shadow-sm" onclick="filterFloorTab('all', this)">
-                    All Floors (@Model.Count())
+                    <span data-i18n="table.allFloors">All Floors</span> (<span data-locale-number="@Model.Count()">@Model.Count()</span>)
                 </button>
                 @foreach (var floor in Model)
                 {
                     <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 floor-nav-btn shadow-sm" onclick="filterFloorTab(@floor.Id, this)">
-                        @floor.Name (@floor.Tables.Count)
+                        <span data-i18n-dynamic data-name-en="@floor.Name" data-name-mr="@(floor.NameMr ?? "")">@floor.Name</span> (<span data-locale-number="@floor.Tables.Count">@floor.Tables.Count</span>)
                     </button>
                 }
             </div>
@@ -109,24 +110,24 @@
     </div>
 </div>
 
-<!-- Compact, Space-Efficient Floor Table Layout (Requested: "Table boxes seems too large, what if there are multiple tables") -->
+<!-- Compact Floor Table Layout -->
 @foreach (var floor in Model)
 {
     <div class="glass-card p-3 mb-3 floor-section-card" data-floor-id="@floor.Id">
         <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
             <div class="d-flex align-items-center gap-2">
-                <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-building text-warning"></i>
-                    <span>@floor.Name</span>
+                <h5 class="fw-bold mb-0 d-flex align-items-center gap-2" style="color: var(--brand-900);">
+                    <i class="fa-solid fa-building" style="color: var(--brand-600);"></i>
+                    <span data-i18n-dynamic data-name-en="@floor.Name" data-name-mr="@(floor.NameMr ?? "")">@floor.Name</span>
                 </h5>
-                <span class="badge bg-light text-secondary border rounded-pill small">@floor.Tables.Count Tables</span>
+                <span class="badge floor-pill rounded-pill small"><span data-locale-number="@floor.Tables.Count">@floor.Tables.Count</span> <span data-i18n="table.tablesUnit">Tables</span></span>
             </div>
             <span class="badge bg-light text-dark border px-2 py-1 rounded-pill small fw-bold">
-                Floor #@floor.DisplayOrder
+                <span data-i18n="table.floorLabel">Floor</span> #<span data-locale-number="@floor.DisplayOrder">@floor.DisplayOrder</span>
             </span>
         </div>
 
-        <!-- Compact Responsive Grid (col-xxl-2 col-xl-2 col-lg-3 col-md-4 col-sm-6 col-6) -->
+        <!-- Compact Responsive Grid -->
         <div class="row g-2">
             @foreach (var table in floor.Tables)
             {
@@ -138,53 +139,47 @@
                     _ => "cleaning"
                 };
 
-                string badgeClass = table.Status switch {
-                    TableStatus.Available => "badge-available",
-                    TableStatus.Occupied => "badge-occupied",
-                    TableStatus.Reserved => "badge-reserved",
-                    TableStatus.Billing => "badge-billing",
-                    _ => "badge-cleaning"
-                };
-
+                string badgeClass = "badge-" + statusKey;
+                string statusI18n = "table." + statusKey;
                 string cleanTableNo = (table.TableNumber ?? "").Replace("Table", "").Trim();
 
-                <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-4 col-sm-6 col-6 table-cell-wrapper" 
-                     data-status="@statusKey" 
-                     data-search="@cleanTableNo @table.Capacity seats @floor.Name.ToLower()">
-                    
+                <div class="col-xxl-2 col-xl-3 col-lg-3 col-md-4 col-sm-6 col-6 table-cell-wrapper"
+                     data-status="@statusKey"
+                     data-search="@cleanTableNo @table.Capacity seats @floor.Name.ToLower() @(table.NameMr ?? "")">
+
                     <div class="table-card-compact status-@statusKey h-100" onclick="if(!event.target.closest('button, a, form')) { window.location.href='/Tables/Details/@table.Id'; }">
                         <!-- Top: Number and Status Badge -->
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark fs-6 d-flex align-items-center gap-1">
+                            <span class="fw-bold fs-6 d-flex align-items-center gap-1" style="color: var(--brand-900);">
                                 <i class="fa-solid fa-chair text-muted small"></i>
-                                <span>Table @cleanTableNo</span>
+                                <span data-i18n-table data-table-num="@cleanTableNo" data-name-mr="@(table.NameMr ?? "")">Table @cleanTableNo</span>
                             </span>
-                            <span class="status-badge @badgeClass" style="font-size: 0.65rem; padding: 2px 8px;">@table.StatusName</span>
+                            <span class="status-badge @badgeClass" style="font-size: 0.65rem; padding: 2px 8px;" data-i18n="@statusI18n">@table.StatusName</span>
                         </div>
 
                         <!-- Mid: Seats and Bill / Guest Info -->
                         <div class="d-flex justify-content-between align-items-center mb-1 small">
                             <span class="seat-pill" style="font-size: 0.7rem; padding: 1px 6px;">
-                                <i class="fa-solid fa-users text-muted me-1"></i>@table.Capacity
+                                <i class="fa-solid fa-users text-muted me-1"></i><span data-locale-number="@table.Capacity">@table.Capacity</span>
                             </span>
                             @if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
                             {
                                 @if (table.CurrentOrderAmount > 0)
                                 {
-                                    <span class="fw-bold text-success" style="font-size: 0.8rem;">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                                    <span class="fw-bold" style="color: var(--leaf); font-size: 0.8rem;" data-locale-currency="@table.CurrentOrderAmount">₹@table.CurrentOrderAmount.ToString("N0")</span>
                                 }
                                 else
                                 {
-                                    <span class="text-muted small fst-italic">No items yet</span>
+                                    <span class="text-muted small fst-italic" data-i18n="table.noItemsYet">No items yet</span>
                                 }
                             }
                             else if (table.Status == TableStatus.Available)
                             {
-                                <span class="text-success fw-semibold" style="font-size: 0.725rem;"><i class="fa-solid fa-check me-1"></i>Ready</span>
+                                <span class="fw-semibold" style="color: var(--leaf); font-size: 0.725rem;"><i class="fa-solid fa-check me-1"></i><span data-i18n="table.ready">Ready</span></span>
                             }
                             else
                             {
-                                <span class="text-primary small" style="font-size: 0.725rem;">Reserved</span>
+                                <span class="text-primary small" style="font-size: 0.725rem;" data-i18n="table.reserved">Reserved</span>
                             }
                         </div>
 

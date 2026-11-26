@@ -104,6 +104,18 @@ public class AuthService : IAuthService
         return true;
     }
 
+    public async Task<bool> UpdatePreferredLanguageAsync(int userId, string language)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null || user.IsDeleted) return false;
+
+        user.PreferredLanguage = language == "mr" ? "mr" : "en";
+        user.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.Users.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+        return true;
+    }
+
     private static UserDto MapToUserDto(User user)
     {
         return new UserDto
@@ -112,8 +124,10 @@ public class AuthService : IAuthService
             Username = user.Username,
             Email = user.Email,
             FullName = user.FullName,
+            FullNameMr = user.FullNameMr,
             Phone = user.Phone,
             Role = user.Role,
+            PreferredLanguage = string.IsNullOrWhiteSpace(user.PreferredLanguage) ? "en" : user.PreferredLanguage,
             IsActive = user.IsActive,
             LastLogin = user.LastLogin
         };

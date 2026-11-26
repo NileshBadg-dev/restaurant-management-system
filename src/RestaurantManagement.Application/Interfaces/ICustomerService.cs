@@ -1,5 +1,4 @@
 using RestaurantManagement.Application.DTOs;
-using RestaurantManagement.Domain.Enums;
 
 namespace RestaurantManagement.Application.Interfaces;
 
@@ -10,11 +9,4 @@ public interface ICustomerService
     Task<CustomerDto?> GetCustomerByPhoneAsync(string phone);
     Task<CustomerDto> CreateOrUpdateCustomerAsync(CustomerCreateUpdateDto dto);
     Task<int> AwardLoyaltyPointsAsync(int customerId, decimal orderAmount, string orderNo);
-}
-
-public interface IReservationService
-{
-    Task<IEnumerable<ReservationDto>> GetReservationsAsync(DateTime? date = null, ReservationStatus? status = null);
-    Task<ReservationDto> CreateReservationAsync(CreateReservationDto dto);
-    Task<ReservationDto> UpdateReservationStatusAsync(int id, ReservationStatus status);
 }

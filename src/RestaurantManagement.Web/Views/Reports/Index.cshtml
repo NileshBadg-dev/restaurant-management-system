@@ -1,6 +1,7 @@
 @model SalesReportDto
 @{
     ViewData["Title"] = "Sales & Tax Reports";
+    ViewData["TitleKey"] = "reports.title";
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 animated-fade-in">
@@ -8,22 +9,22 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-1 fs-6">
                 <li class="breadcrumb-item">
-                    <a href="/Dashboard" class="text-decoration-none fw-semibold text-success">
-                        <i class="fa-solid fa-chart-pie me-1" data-bs-toggle="tooltip" title="Dashboard"></i> Dashboard
+                    <a href="/Dashboard" class="text-decoration-none fw-semibold" style="color: var(--brand-600);">
+                        <i class="fa-solid fa-chart-pie me-1"></i> <span data-i18n="nav.dashboard">Dashboard</span>
                     </a>
                 </li>
                 <li class="breadcrumb-item active fw-bold text-dark" aria-current="page">
-                    <i class="fa-solid fa-chart-pie text-success me-1"></i> Reports & Analytics
+                    <i class="fa-solid fa-chart-pie me-1" style="color: var(--brand-600);"></i> <span data-i18n="nav.reports">Reports</span>
                 </li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-0 text-dark">
-            <i class="fa-solid fa-chart-pie text-success me-2"></i>Sales & Tax Reports
+        <h2 class="fw-bold mb-0" style="color: var(--brand-900);">
+            <i class="fa-solid fa-chart-pie me-2" style="color: var(--brand-600);"></i><span data-i18n="reports.title">Sales &amp; Tax Reports</span>
         </h2>
     </div>
     <div>
-        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" data-bs-toggle="tooltip" title="Back to Dashboard">
-            <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+        <a href="/Dashboard" class="btn btn-outline-secondary rounded-pill px-3 shadow-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i> <span data-i18n="header.backToDashboard">Back to Dashboard</span>
         </a>
     </div>
 </div>
@@ -32,45 +33,45 @@
 <div class="row g-4 mb-4 animated-fade-in">
     <div class="col-md-3 col-6">
         <div class="glass-card p-4 text-center">
-            <div class="text-secondary small fw-bold text-uppercase">Total Revenue</div>
-            <div class="fs-2 fw-bold text-success mt-2">₹@Model.TotalRevenue.ToString("N0")</div>
-            <div class="small text-secondary mt-1">Net Settled Amount</div>
+            <div class="text-secondary small fw-bold text-uppercase" data-i18n="reports.totalRevenue">Total Revenue</div>
+            <div class="fs-2 fw-bold mt-2" style="color: var(--brand-600);" data-locale-currency="@Model.TotalRevenue">₹@Model.TotalRevenue.ToString("N0")</div>
+            <div class="small text-secondary mt-1" data-i18n="reports.netSettled">Net Settled Amount</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="glass-card p-4 text-center">
-            <div class="text-secondary small fw-bold text-uppercase">Total Completed Orders</div>
-            <div class="fs-2 fw-bold text-info mt-2">@Model.TotalOrders</div>
-            <div class="small text-secondary mt-1">Dine-in, Takeaway & Delivery</div>
+            <div class="text-secondary small fw-bold text-uppercase" data-i18n="reports.totalCompleted">Total Completed Orders</div>
+            <div class="fs-2 fw-bold mt-2" style="color: var(--brand-900);" data-locale-number="@Model.TotalOrders">@Model.TotalOrders</div>
+            <div class="small text-secondary mt-1" data-i18n="reports.allOrderTypes">Dine-in, Takeaway &amp; Delivery</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="glass-card p-4 text-center">
-            <div class="text-secondary small fw-bold text-uppercase">Total CGST Tax (2.5%)</div>
-            <div class="fs-2 fw-bold text-warning mt-2">₹@Model.TotalCGST.ToString("N0")</div>
-            <div class="small text-secondary mt-1">Central Tax Liability</div>
+            <div class="text-secondary small fw-bold text-uppercase" data-i18n="reports.totalCgst">Total CGST Tax (2.5%)</div>
+            <div class="fs-2 fw-bold text-warning mt-2" data-locale-currency="@Model.TotalCGST">₹@Model.TotalCGST.ToString("N0")</div>
+            <div class="small text-secondary mt-1" data-i18n="reports.centralTax">Central Tax Liability</div>
         </div>
     </div>
     <div class="col-md-3 col-6">
         <div class="glass-card p-4 text-center">
-            <div class="text-secondary small fw-bold text-uppercase">Total SGST Tax (2.5%)</div>
-            <div class="fs-2 fw-bold text-warning mt-2">₹@Model.TotalSGST.ToString("N0")</div>
-            <div class="small text-secondary mt-1">State Tax Liability</div>
+            <div class="text-secondary small fw-bold text-uppercase" data-i18n="reports.totalSgst">Total SGST Tax (2.5%)</div>
+            <div class="fs-2 fw-bold text-warning mt-2" data-locale-currency="@Model.TotalSGST">₹@Model.TotalSGST.ToString("N0")</div>
+            <div class="small text-secondary mt-1" data-i18n="reports.stateTax">State Tax Liability</div>
         </div>
     </div>
 </div>
 
 <!-- Breakdown Table -->
 <div class="glass-card p-4 animated-fade-in">
-    <h5 class="fw-bold text-dark mb-3 border-bottom pb-2"><i class="fa-solid fa-calendar-days text-info me-2"></i>Daily Sales Summary</h5>
+    <h5 class="fw-bold mb-3 border-bottom pb-2" style="color: var(--brand-900);"><i class="fa-solid fa-calendar-days me-2" style="color: var(--brand-600);"></i><span data-i18n="reports.dailySummary">Daily Sales Summary</span></h5>
     <div class="table-responsive">
         <table class="table app-datagrid align-middle">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Total Orders</th>
-                    <th>Tax Collected (GST)</th>
-                    <th class="text-end">Sales Amount</th>
+                    <th data-i18n="reports.date">Date</th>
+                    <th data-i18n="reports.totalOrders">Total Orders</th>
+                    <th data-i18n="reports.taxCollected">Tax Collected (GST)</th>
+                    <th class="text-end" data-i18n="reports.salesAmount">Sales Amount</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,7 +80,7 @@
                     <tr>
                         <td colspan="4" class="text-center py-5 text-muted">
                             <i class="fa-solid fa-chart-line fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                            <p class="small mb-0 text-muted">No sales records found for the selected period.</p>
+                            <p class="small mb-0 text-muted" data-i18n="reports.noSales">No sales records found for the selected period.</p>
                         </td>
                     </tr>
                 }
@@ -89,10 +90,10 @@
                     {
                         decimal dayTax = Math.Round(day.SalesAmount * 0.05m / 1.05m, 2);
                         <tr>
-                            <td class="fw-bold text-dark">@day.Date.ToString("dd MMM yyyy (ddd)")</td>
-                            <td><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-3 py-1">@day.OrdersCount Orders</span></td>
-                            <td class="text-secondary">₹@dayTax.ToString("N0")</td>
-                            <td class="text-end fw-bold text-dark fs-6">₹@day.SalesAmount.ToString("N0")</td>
+                            <td class="fw-bold text-dark" data-locale-date="@day.Date.ToString("O")">@day.Date.ToString("dd MMM yyyy (ddd)")</td>
+                            <td><span class="badge floor-pill rounded-pill px-3 py-1"><span data-locale-number="@day.OrdersCount">@day.OrdersCount</span> <span data-i18n="dash.ordersUnit">orders</span></span></td>
+                            <td class="text-secondary" data-locale-currency="@dayTax">₹@dayTax.ToString("N0")</td>
+                            <td class="text-end fw-bold text-dark fs-6" data-locale-currency="@day.SalesAmount">₹@day.SalesAmount.ToString("N0")</td>
                         </tr>
                     }
                 }

@@ -15,69 +15,79 @@ public static class DbInitializer
         // 1. Seed Restaurant Settings
         context.RestaurantSettings.Add(new RestaurantSetting
         {
-            RestaurantName = "Girana Garden Fine Dine & Bar",
-            Address = "101 Grand Galleria, MG Road, Ahmedabad - 380001",
+            RestaurantName = "Hotel Kumbharwada",
+            RestaurantNameMr = "हॉटेल कुंभारवाडा",
+            Tagline = "Authentic Village Dining & Hospitality",
+            TaglineMr = "अस्सल गावरान जेवण आणि आतिथ्य",
+            Address = "101 Heritage Courtyard, Kumbharwada Road, Pune, Maharashtra - 411002",
+            AddressMr = "१०१ हेरिटेज कोर्टयार्ड, कुंभारवाडा रोड, पुणे, महाराष्ट्र - ४११००२",
+            AddressLine1 = "101 Heritage Courtyard, Kumbharwada Road",
+            AddressLine2 = "",
+            City = "Pune",
+            State = "Maharashtra",
+            PinCode = "411002",
             Phone = "+91 98765 43210",
-            Email = "contact@giranagarden.com",
-            GSTIN = "24AAACG1234F1Z9",
+            Email = "contact@hotelkumbharwada.com",
+            GSTIN = "27AAACH1234F1Z9",
             CurrencySymbol = "₹",
             CGSTPercentage = 2.5m,
             SGSTPercentage = 2.5m,
             ServiceChargePercentage = 0m,
+            LogoUrl = "/assets/hotel-logo.jpg",
             InvoicePrefix = "INV"
         });
 
         // 2. Seed Users for each role
-        var admin = new User { Username = "admin", PasswordHash = "admin123", FullName = "System Administrator", Email = "admin@giranagarden.com", Phone = "9876500001", Role = UserRole.Admin };
-        var manager = new User { Username = "manager", PasswordHash = "manager123", FullName = "Rajesh Verma (Manager)", Email = "manager@giranagarden.com", Phone = "9876500002", Role = UserRole.Manager };
-        var cashier = new User { Username = "cashier", PasswordHash = "cashier123", FullName = "Suresh Patel (Cashier)", Email = "cashier@giranagarden.com", Phone = "9876500003", Role = UserRole.Cashier };
-        var waiter = new User { Username = "waiter", PasswordHash = "waiter123", FullName = "Amit Kumar (Waiter)", Email = "waiter@giranagarden.com", Phone = "9876500004", Role = UserRole.Waiter };
-        var kitchen = new User { Username = "kitchen", PasswordHash = "kitchen123", FullName = "Chef Sunita (Kitchen Head)", Email = "kitchen@giranagarden.com", Phone = "9876500005", Role = UserRole.KitchenStaff };
-        var inventoryUser = new User { Username = "inventory", PasswordHash = "inventory123", FullName = "Vikram Singh (Inventory)", Email = "inventory@giranagarden.com", Phone = "9876500006", Role = UserRole.InventoryStaff };
+        var admin = new User { Username = "admin", PasswordHash = "admin123", FullName = "System Administrator", FullNameMr = "सिस्टम प्रशासक", Email = "admin@hotelkumbharwada.com", Phone = "9876500001", Role = UserRole.Admin };
+        var manager = new User { Username = "manager", PasswordHash = "manager123", FullName = "Rajesh Verma", FullNameMr = "राजेश वर्मा", Email = "manager@hotelkumbharwada.com", Phone = "9876500002", Role = UserRole.Manager };
+        var cashier = new User { Username = "cashier", PasswordHash = "cashier123", FullName = "Suresh Patel", FullNameMr = "सुरेश पटेल", Email = "cashier@hotelkumbharwada.com", Phone = "9876500003", Role = UserRole.Cashier };
+        var waiter = new User { Username = "waiter", PasswordHash = "waiter123", FullName = "Amit Kumar", FullNameMr = "अमित कुमार", Email = "waiter@hotelkumbharwada.com", Phone = "9876500004", Role = UserRole.Waiter };
+        var kitchen = new User { Username = "kitchen", PasswordHash = "kitchen123", FullName = "Chef Sunita", FullNameMr = "शेफ सुनीता", Email = "kitchen@hotelkumbharwada.com", Phone = "9876500005", Role = UserRole.KitchenStaff };
+        var inventoryUser = new User { Username = "inventory", PasswordHash = "inventory123", FullName = "Vikram Singh", FullNameMr = "विक्रम सिंग", Email = "inventory@hotelkumbharwada.com", Phone = "9876500006", Role = UserRole.InventoryStaff };
 
         context.Users.AddRange(admin, manager, cashier, waiter, kitchen, inventoryUser);
         context.SaveChanges();
 
         // 3. Seed Floors & Tables
-        var groundFloor = new Floor { Name = "Ground Floor", Description = "Main Dining Area", DisplayOrder = 1 };
-        var firstFloor = new Floor { Name = "First Floor", Description = "AC Lounge & Family Area", DisplayOrder = 2 };
-        var outdoor = new Floor { Name = "Outdoor Patio", Description = "Open Garden Seating", DisplayOrder = 3 };
+        var groundFloor = new Floor { Name = "Ground Floor", NameMr = "तळमजला", Description = "Main Dining Area", DisplayOrder = 1 };
+        var firstFloor = new Floor { Name = "First Floor", NameMr = "पहिला मजला", Description = "AC Lounge & Family Area", DisplayOrder = 2 };
+        var outdoor = new Floor { Name = "Outdoor Patio", NameMr = "बाहेरील पॅटिओ", Description = "Open Garden Seating", DisplayOrder = 3 };
 
         context.Floors.AddRange(groundFloor, firstFloor, outdoor);
         context.SaveChanges();
 
-        var t1 = new Table { TableNumber = "01", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t2 = new Table { TableNumber = "02", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t3 = new Table { TableNumber = "03", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t4 = new Table { TableNumber = "04", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
-        var t5 = new Table { TableNumber = "05", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t1 = new Table { TableNumber = "01", NameMr = "टेबल ०१", Capacity = 2, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t2 = new Table { TableNumber = "02", NameMr = "टेबल ०२", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t3 = new Table { TableNumber = "03", NameMr = "टेबल ०३", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t4 = new Table { TableNumber = "04", NameMr = "टेबल ०४", Capacity = 6, FloorId = groundFloor.Id, Status = TableStatus.Available };
+        var t5 = new Table { TableNumber = "05", NameMr = "टेबल ०५", Capacity = 4, FloorId = groundFloor.Id, Status = TableStatus.Available };
         
-        var t11 = new Table { TableNumber = "11", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
-        var t12 = new Table { TableNumber = "12", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        var t11 = new Table { TableNumber = "11", NameMr = "टेबल ११", Capacity = 4, FloorId = firstFloor.Id, Status = TableStatus.Available };
+        var t12 = new Table { TableNumber = "12", NameMr = "टेबल १२", Capacity = 6, FloorId = firstFloor.Id, Status = TableStatus.Available };
         
-        var t21 = new Table { TableNumber = "21", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
-        var t22 = new Table { TableNumber = "22", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Available };
+        var t21 = new Table { TableNumber = "21", NameMr = "टेबल २१", Capacity = 2, FloorId = outdoor.Id, Status = TableStatus.Available };
+        var t22 = new Table { TableNumber = "22", NameMr = "टेबल २२", Capacity = 4, FloorId = outdoor.Id, Status = TableStatus.Available };
 
         context.Tables.AddRange(t1, t2, t3, t4, t5, t11, t12, t21, t22);
         context.SaveChanges();
 
         // 4. Seed Categories & Menu Items
-        var starters = new Category { Name = "Starters", Description = "Delicious appetizers and quick bites", DisplayOrder = 1, ImageUrl = "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=500" };
-        var mainCourse = new Category { Name = "Main Course", Description = "Authentic Indian Curries & Gravies", DisplayOrder = 2, ImageUrl = "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500" };
-        var biryani = new Category { Name = "Biryani & Rice", Description = "Aromatic Hyderabadi & Dum Biryanis", DisplayOrder = 3, ImageUrl = "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500" };
-        var beverages = new Category { Name = "Beverages", Description = "Refreshing Mocktails & Shakes", DisplayOrder = 4, ImageUrl = "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500" };
-        var desserts = new Category { Name = "Desserts", Description = "Sweet indulgences", DisplayOrder = 5, ImageUrl = "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=500" };
+        var starters = new Category { Name = "Starters", NameMr = "स्टार्टर्स", Description = "Delicious appetizers and quick bites", DisplayOrder = 1, ImageUrl = "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=500" };
+        var mainCourse = new Category { Name = "Main Course", NameMr = "मुख्य जेवण", Description = "Authentic Indian Curries & Gravies", DisplayOrder = 2, ImageUrl = "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=500" };
+        var biryani = new Category { Name = "Biryani & Rice", NameMr = "बिर्याणी आणि भात", Description = "Aromatic Hyderabadi & Dum Biryanis", DisplayOrder = 3, ImageUrl = "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=500" };
+        var beverages = new Category { Name = "Beverages", NameMr = "पेये", Description = "Refreshing Mocktails & Shakes", DisplayOrder = 4, ImageUrl = "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500" };
+        var desserts = new Category { Name = "Desserts", NameMr = "गोड पदार्थ", Description = "Sweet indulgences", DisplayOrder = 5, ImageUrl = "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=500" };
 
         context.Categories.AddRange(starters, mainCourse, biryani, beverages, desserts);
         context.SaveChanges();
 
-        var paneerTikka = new MenuItem { CategoryId = starters.Id, Name = "Paneer Tikka", Description = "Cottage cheese marinated in yogurt and spices", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 15 };
-        var dalMakhani = new MenuItem { CategoryId = mainCourse.Id, Name = "Dal Makhani", Description = "Slow cooked black lentils with cream and butter", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 20 };
-        var butterNaan = new MenuItem { CategoryId = mainCourse.Id, Name = "Butter Naan", Description = "Freshly baked clay oven bread with butter", Price = 50m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 8 };
-        var chickenBiryani = new MenuItem { CategoryId = biryani.Id, Name = "Chicken Biryani", Description = "Flavorful Basmati rice cooked with tender chicken", Price = 320m, IsVeg = false, IsAvailable = true, PreparationTimeMinutes = 25 };
-        var coldDrink = new MenuItem { CategoryId = beverages.Id, Name = "Cold Drink / Soda", Description = "Chilled carbonated beverage 300ml", Price = 60m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 2 };
-        var coldCoffee = new MenuItem { CategoryId = beverages.Id, Name = "Cold Coffee with Ice Cream", Description = "Rich blended espresso with vanilla scoop", Price = 140m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 10 };
-        var gulabJamun = new MenuItem { CategoryId = desserts.Id, Name = "Gulab Jamun (2 Pcs)", Description = "Warm milk dumplings in rose flavored sugar syrup", Price = 90m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 5 };
+        var paneerTikka = new MenuItem { CategoryId = starters.Id, Name = "Paneer Tikka", NameMr = "पनीर टिक्का", Description = "Cottage cheese marinated in yogurt and spices", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 15 };
+        var dalMakhani = new MenuItem { CategoryId = mainCourse.Id, Name = "Dal Makhani", NameMr = "डाळ मखनी", Description = "Slow cooked black lentils with cream and butter", Price = 250m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 20 };
+        var butterNaan = new MenuItem { CategoryId = mainCourse.Id, Name = "Butter Naan", NameMr = "बटर नान", Description = "Freshly baked clay oven bread with butter", Price = 50m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 8 };
+        var chickenBiryani = new MenuItem { CategoryId = biryani.Id, Name = "Chicken Biryani", NameMr = "चिकन बिर्याणी", Description = "Flavorful Basmati rice cooked with tender chicken", Price = 320m, IsVeg = false, IsAvailable = true, PreparationTimeMinutes = 25 };
+        var coldDrink = new MenuItem { CategoryId = beverages.Id, Name = "Cold Drink / Soda", NameMr = "थंड पेय / सोडा", Description = "Chilled carbonated beverage 300ml", Price = 60m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 2 };
+        var coldCoffee = new MenuItem { CategoryId = beverages.Id, Name = "Cold Coffee with Ice Cream", NameMr = "कोल्ड कॉफी (आईस्क्रीमसह)", Description = "Rich blended espresso with vanilla scoop", Price = 140m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 10 };
+        var gulabJamun = new MenuItem { CategoryId = desserts.Id, Name = "Gulab Jamun (2 Pcs)", NameMr = "गुलाब जामून (२ नग)", Description = "Warm milk dumplings in rose flavored sugar syrup", Price = 90m, IsVeg = true, IsAvailable = true, PreparationTimeMinutes = 5 };
 
         context.MenuItems.AddRange(paneerTikka, dalMakhani, butterNaan, chickenBiryani, coldDrink, coldCoffee, gulabJamun);
         context.SaveChanges();

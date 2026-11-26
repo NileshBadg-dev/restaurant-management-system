@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using RestaurantManagement.Domain.Enums;
 
 namespace RestaurantManagement.Domain.Entities;
@@ -5,6 +6,8 @@ namespace RestaurantManagement.Domain.Entities;
 public class Table : BaseEntity
 {
     public string TableNumber { get; set; } = string.Empty;
+    [JsonPropertyName("name_mr")]
+    public string? NameMr { get; set; }
     public int Capacity { get; set; } = 4;
     public int FloorId { get; set; }
     public Floor? Floor { get; set; }

@@ -24,6 +24,7 @@ public class MenuService : IMenuService
         {
             Id = c.Id,
             Name = c.Name,
+            NameMr = c.NameMr,
             Description = c.Description,
             DisplayOrder = c.DisplayOrder,
             ImageUrl = c.ImageUrl,
@@ -42,11 +43,12 @@ public class MenuService : IMenuService
         {
             Id = category.Id,
             Name = category.Name,
+            NameMr = category.NameMr,
             Description = category.Description,
             DisplayOrder = category.DisplayOrder,
             ImageUrl = category.ImageUrl,
             ItemCount = items.Count(),
-            MenuItems = items.Select(m => MapToMenuItemDto(m, category.Name)).ToList()
+            MenuItems = items.Select(m => MapToMenuItemDto(m, category.Name, category.NameMr)).ToList()
         };
     }
 
@@ -55,6 +57,7 @@ public class MenuService : IMenuService
         var category = new Category
         {
             Name = dto.Name,
+            NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim(),
             Description = dto.Description,
             DisplayOrder = dto.DisplayOrder,
             ImageUrl = dto.ImageUrl
@@ -73,6 +76,7 @@ public class MenuService : IMenuService
         if (category == null || category.IsDeleted) throw new KeyNotFoundException($"Category with id {id} not found.");
 
         category.Name = dto.Name;
+        category.NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim();
         category.Description = dto.Description;
         category.DisplayOrder = dto.DisplayOrder;
         category.ImageUrl = dto.ImageUrl;
@@ -110,10 +114,16 @@ public class MenuService : IMenuService
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.ToLower();
-            query = query.Where(i => i.Name.ToLower().Contains(s) || i.Description.ToLower().Contains(s));
+            query = query.Where(i => i.Name.ToLower().Contains(s)
+                || (!string.IsNullOrEmpty(i.NameMr) && i.NameMr.ToLower().Contains(s))
+                || i.Description.ToLower().Contains(s));
         }
 
-        return query.Select(i => MapToMenuItemDto(i, categories.TryGetValue(i.CategoryId, out var c) ? c.Name : "", variants.TryGetValue(i.Id, out var vList) ? vList : null));
+        return query.Select(i => MapToMenuItemDto(
+            i,
+            categories.TryGetValue(i.CategoryId, out var c) ? c.Name : "",
+            c?.NameMr,
+            variants.TryGetValue(i.Id, out var vList) ? vList : null));
     }
 
     public async Task<MenuItemDto?> GetMenuItemByIdAsync(int id)
@@ -124,7 +134,7 @@ public class MenuService : IMenuService
         var category = await _unitOfWork.Categories.GetByIdAsync(item.CategoryId);
         var variants = await _unitOfWork.MenuItemVariants.FindAsync(v => v.MenuItemId == id && !v.IsDeleted);
 
-        return MapToMenuItemDto(item, category?.Name ?? "", variants.ToList());
+        return MapToMenuItemDto(item, category?.Name ?? "", category?.NameMr, variants.ToList());
     }
 
     public async Task<MenuItemDto> CreateMenuItemAsync(MenuItemCreateUpdateDto dto)
@@ -133,6 +143,7 @@ public class MenuService : IMenuService
         {
             CategoryId = dto.CategoryId,
             Name = dto.Name,
+            NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim(),
             Description = dto.Description,
             Price = dto.Price,
             TaxPercentage = dto.TaxPercentage,
@@ -146,7 +157,7 @@ public class MenuService : IMenuService
         await _unitOfWork.SaveChangesAsync();
 
         var category = await _unitOfWork.Categories.GetByIdAsync(dto.CategoryId);
-        return MapToMenuItemDto(item, category?.Name ?? "");
+        return MapToMenuItemDto(item, category?.Name ?? "", category?.NameMr);
     }
 
     public async Task<MenuItemDto> UpdateMenuItemAsync(int id, MenuItemCreateUpdateDto dto)
@@ -156,6 +167,7 @@ public class MenuService : IMenuService
 
         item.CategoryId = dto.CategoryId;
         item.Name = dto.Name;
+        item.NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim();
         item.Description = dto.Description;
         item.Price = dto.Price;
         item.TaxPercentage = dto.TaxPercentage;
@@ -169,7 +181,7 @@ public class MenuService : IMenuService
         await _unitOfWork.SaveChangesAsync();
 
         var category = await _unitOfWork.Categories.GetByIdAsync(dto.CategoryId);
-        return MapToMenuItemDto(item, category?.Name ?? "");
+        return MapToMenuItemDto(item, category?.Name ?? "", category?.NameMr);
     }
 
     public async Task<bool> ToggleItemAvailabilityAsync(int id)
@@ -195,14 +207,16 @@ public class MenuService : IMenuService
         return true;
     }
 
-    private static MenuItemDto MapToMenuItemDto(MenuItem m, string categoryName, List<MenuItemVariant>? variants = null)
+    private static MenuItemDto MapToMenuItemDto(MenuItem m, string categoryName, string? categoryNameMr = null, List<MenuItemVariant>? variants = null)
     {
         return new MenuItemDto
         {
             Id = m.Id,
             CategoryId = m.CategoryId,
             CategoryName = categoryName,
+            CategoryNameMr = categoryNameMr,
             Name = m.Name,
+            NameMr = m.NameMr,
             Description = m.Description,
             Price = m.Price,
             TaxPercentage = m.TaxPercentage,

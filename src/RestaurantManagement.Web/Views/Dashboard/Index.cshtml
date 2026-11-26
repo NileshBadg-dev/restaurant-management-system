@@ -1,382 +1,263 @@
 @model DashboardSummaryDto
+@using System.Security.Claims
+@inject RestaurantManagement.Web.Services.IWebConfigCacheService ConfigCache
 @{
     ViewData["Title"] = "Dashboard";
+    ViewData["TitleKey"] = "nav.dashboard";
+    var setting = await ConfigCache.GetSettingsAsync();
+    var restaurantName = string.IsNullOrWhiteSpace(setting.RestaurantName) ? "Hotel Kumbharwada" : setting.RestaurantName;
+    var restaurantNameMr = string.IsNullOrWhiteSpace(setting.RestaurantNameMr) ? restaurantName : setting.RestaurantNameMr;
+
     bool isAuth = User.Identity?.IsAuthenticated == true;
-    string dashUser = isAuth 
-        ? (User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Manager")
+    string dashUser = isAuth
+        ? (User.FindFirst(ClaimTypes.GivenName)?.Value ?? User.Identity?.Name ?? "Manager")
         : "Manager";
+    string dashUserMr = isAuth
+        ? (User.FindFirst("FullNameMr")?.Value ?? dashUser)
+        : "व्यवस्थापक";
     string dashRole = isAuth
-        ? (User.FindFirst("RoleName")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Manager")
+        ? (User.FindFirst("RoleName")?.Value ?? User.FindFirst(ClaimTypes.Role)?.Value ?? "Manager")
         : "Manager";
+
+    bool showSalesTrend = Model.TodaySales != 0m || Model.YesterdaySales != 0m;
+    decimal salesPctChange = 0m;
+    if (showSalesTrend)
+    {
+        salesPctChange = Model.YesterdaySales > 0m
+            ? Math.Round(((Model.TodaySales - Model.YesterdaySales) / Model.YesterdaySales) * 100m, 0)
+            : 100m;
+    }
+
+    var sortedTables = Model.FloorTables
+        .SelectMany(f => f.Tables)
+        .OrderBy(t =>
+        {
+            var raw = (t.TableNumber ?? "").Replace("Table", "").Trim();
+            return int.TryParse(raw, out int num) ? num : int.MaxValue;
+        })
+        .ThenBy(t => t.TableNumber)
+        .ToList();
+
+    var billingTablesCount = sortedTables.Count(t => t.Status == TableStatus.Billing);
+    var displayOrders = Model.RecentOrders != null && Model.RecentOrders.Any()
+        ? Model.RecentOrders.Take(5).ToList()
+        : new List<RecentOrderSummaryDto>();
+    var topItems = Model.TopSellingItems != null && Model.TopSellingItems.Any()
+        ? Model.TopSellingItems.Take(5).ToList()
+        : new List<TopSellingItemDto>();
+    int maxQty = topItems.Any() ? Math.Max(1, topItems.Max(x => x.TotalQuantitySold)) : 1;
+    int statusTotal = Model.NewOrdersCount + Model.PreparingOrdersCount + Model.ReadyOrdersCount + Model.ServedOrdersCount + Model.CancelledOrdersCount;
 }
 
-<!-- Top Header Bar Matching Screenshot -->
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 anim-section dashboard-top-bar position-relative" style="z-index: 1050;">
-    <div>
-        <div class="text-muted small fw-semibold" style="font-size: 0.825rem;">Good afternoon, @dashUser</div>
-        <h2 class="fw-bold mb-0" style="color: #047857; font-family: var(--font-heading); font-size: 1.75rem; letter-spacing: -0.5px;">
-            Girana Garden Dashboard
-        </h2>
+<!-- Top Header Bar -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 anim-section dashboard-top-bar position-relative">
+    <div class="d-flex align-items-center gap-3">
+        <!-- Mobile-only Hamburger (<1024px) -->
+        <button type="button"
+                class="mobile-hamburger-btn d-lg-none js-mobile-toggle"
+                aria-label="Toggle sidebar"
+                data-i18n-aria="nav.toggleSidebar"
+                aria-controls="appSidebar"
+                aria-expanded="false">
+            <svg class="js-mobile-open-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                <path d="M9 3v18"></path>
+                <path d="m14 9 3 3-3 3"></path>
+            </svg>
+            <svg class="js-mobile-close-icon d-none" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+
+        <div>
+            <div class="text-secondary small fw-semibold" style="font-size: 0.875rem;" data-i18n-greeting data-user-en="@dashUser" data-user-mr="@dashUserMr">
+                Good afternoon, @dashUser
+            </div>
+            <h1 class="fw-bold mb-0" style="color: var(--brand-900); font-family: var(--font-heading); font-size: 1.65rem; letter-spacing: -0.4px;">
+                <span data-brand-name data-name-en="@restaurantName" data-name-mr="@restaurantNameMr">@restaurantName</span> <span data-i18n="dash.titleSuffix">Dashboard</span>
+            </h1>
+        </div>
     </div>
-    <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
-        <div class="px-3 py-2 rounded-pill bg-white border small fw-semibold text-secondary d-flex align-items-center gap-2 shadow-sm" style="font-size: 0.8rem; border-color: #cbd5e1 !important;">
-            <i class="fa-regular fa-calendar text-muted"></i>
+
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="live-clock-badge d-none d-xl-flex">
+            <i class="fa-regular fa-calendar" style="color: var(--brand-600);"></i>
             <span id="headerClockDate">@DateTime.Now.ToString("ddd, MMM dd, yyyy - hh:mm tt")</span>
         </div>
+
         @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Cashier"))
         {
-            <a href="/Orders/POS?returnUrl=/Dashboard" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #00796b; border: none; font-size: 0.85rem;">
-                <i class="fa-solid fa-plus"></i> New Order
-            </a>
-        }
-        @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("KitchenStaff") || User.IsInRole("Cook"))
-        {
-            <a href="/Kitchen" class="btn btn-sm text-white fw-bold px-3 py-2 rounded-pill shadow-sm d-flex align-items-center gap-1" style="background-color: #b45309; border: none; font-size: 0.85rem;">
-                Kitchen KDS
+            <a href="/Orders/POS?returnUrl=/Dashboard" class="btn btn-primary fw-bold px-3 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+                <i class="fa-solid fa-plus"></i>
+                <span data-i18n="header.newOrder">New Order</span>
             </a>
         }
 
-        <!-- Live Role Display & Switcher (FR-AUTH-05) -->
+        <!-- Standalone Always-Visible Language Toggle -->
+        <div class="lang-switcher-pill" role="group" aria-label="Language">
+            <button type="button" class="lang-switch-btn" data-lang="en" onclick="I18n.setLanguage('en')">English</button>
+            <button type="button" class="lang-switch-btn" data-lang="mr" onclick="I18n.setLanguage('mr')">मराठी</button>
+        </div>
+
+        <!-- Read-Only User Info + Sign Out Dropdown -->
         <div class="dropdown position-relative" style="z-index: 1055;">
-            <button class="btn role-dropdown-btn btn-sm dropdown-toggle rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 border bg-white fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.825rem; border-color: #cbd5e1 !important;" title="Active User: @dashUser">
-                <i class="fa-solid fa-user-shield text-success me-1"></i> Role: <strong class="text-dark">@dashRole</strong>
+            <button class="btn role-dropdown-btn dropdown-toggle px-3 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@dashUser">
+                <i class="fa-solid fa-user-shield" style="color: var(--brand-600);"></i>
+                <span><span data-i18n="header.role">Role</span>: <strong data-i18n-role="@dashRole">@dashRole</strong></span>
             </button>
-            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="border-radius: 12px; border: 1.5px solid #cbd5e1; z-index: 1060; min-width: 210px;">
-                <li class="px-3 py-2 border-bottom bg-light rounded-top">
-                    <div class="fw-bold text-dark small">@dashUser</div>
-                    <div class="text-muted small" style="font-size: 0.72rem;">@dashRole &bull; Girana RMS</div>
+            <ul class="dropdown-menu role-dropdown-menu dropdown-menu-end shadow-lg" style="min-width: 220px;">
+                <li class="px-3 py-2 border-bottom rounded-top" style="background: var(--surface-page);">
+                    <div class="fw-bold small" style="color: var(--brand-900);" data-i18n-dynamic data-name-en="@dashUser" data-name-mr="@dashUserMr">@dashUser</div>
+                    <div class="text-muted small" style="font-size: 0.78rem;">
+                        <span data-i18n-role="@dashRole">@dashRole</span> &bull; <span data-brand-name data-name-en="@restaurantName" data-name-mr="@restaurantNameMr">@restaurantName</span>
+                    </div>
                 </li>
-                <li><a class="dropdown-item @(dashRole == "Administrator" || dashRole == "Admin" ? "active" : "")" href="#"><i class="fa-solid fa-user-gear text-danger me-2"></i> Admin</a></li>
-                <li><a class="dropdown-item @(dashRole.Contains("Manager") ? "active" : "")" href="#"><i class="fa-solid fa-briefcase text-success me-2"></i> Manager</a></li>
-                <li><a class="dropdown-item @(dashRole.Contains("Cashier") ? "active" : "")" href="#"><i class="fa-solid fa-cash-register text-primary me-2"></i> Cashier</a></li>
-                <li><a class="dropdown-item @(dashRole.Contains("Waiter") ? "active" : "")" href="#"><i class="fa-solid fa-tray text-warning me-2"></i> Waiter</a></li>
-                <li><a class="dropdown-item @(dashRole.Contains("Kitchen") ? "active" : "")" href="#"><i class="fa-solid fa-kitchen-set text-info me-2"></i> Kitchen Staff</a></li>
                 <li><hr class="dropdown-divider my-1"></li>
-                <li>
-                    <a class="dropdown-item small" href="/Account/Login?switchUser=true">
-                        <i class="fa-solid fa-arrows-rotate text-secondary me-2"></i> Switch User / Terminal
-                    </a>
-                </li>
                 @if (isAuth)
                 {
                     <li>
-                        <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout" onclick="window.location.href='/Account/Logout';">
-                            <i class="fa-solid fa-right-from-bracket me-2"></i> Sign Out
+                        <a class="dropdown-item small text-danger fw-semibold logout-link" href="/Account/Logout">
+                            <i class="fa-solid fa-right-from-bracket me-2"></i>
+                            <span data-i18n="header.signOut">Sign Out</span>
                         </a>
                     </li>
                 }
                 else
                 {
                     <li>
-                        <a class="dropdown-item small text-success fw-semibold" href="/Account/Login">
-                            <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+                        <a class="dropdown-item small fw-semibold" style="color: var(--brand-600);" href="/Account/Login">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>
+                            <span data-i18n="header.signIn">Sign In</span>
                         </a>
                     </li>
                 }
             </ul>
         </div>
-
-        <a href="/Account/Logout" onclick="window.location.href='/Account/Logout';" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-1 fw-semibold" style="font-size: 0.825rem;" title="Sign out of system">
-            <i class="fa-solid fa-right-from-bracket"></i> Sign Out
-        </a>
     </div>
 </div>
 
-<!-- Row 1: Key Metrics Cards (5 Color-Badged Clean Cards with Distinct Borders & Bold Typography) -->
+<!-- Row 1: Key Metrics Cards (Neutral Border, Color Only on Small Badge) -->
 <div class="row g-3 mb-4 anim-section anim-delay-1 position-relative" style="z-index: 1;">
     <!-- Card 1: Today's Sales -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="metric-card-clean metric-card-sales-border">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="metric-label metric-label-bold">TODAY'S SALES</span>
-                <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; font-weight: 800;">
-                    <i class="fa-solid fa-caret-up me-1"></i>12%
-                </span>
+        <div class="metric-card-clean">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <span class="metric-label metric-label-bold" data-i18n="dash.kpi.todaySales">TODAY'S SALES</span>
+                @if (showSalesTrend)
+                {
+                    <span class="badge rounded-pill" style="@(salesPctChange >= 0 ? "background: var(--status-available-bg); color: var(--status-available-text); border: 1px solid var(--status-available-border);" : "background: var(--status-alert-bg); color: var(--status-alert-text); border: 1px solid var(--status-alert-border);") font-weight: 800;">
+                        <i class="fa-solid @(salesPctChange >= 0 ? "fa-caret-up" : "fa-caret-down") me-1"></i><span data-locale-number="@Math.Abs(salesPctChange)">@Math.Abs(salesPctChange)</span>%
+                    </span>
+                }
+                else
+                {
+                    <span class="badge rounded-pill bg-light text-secondary border" style="font-weight: 800;">–</span>
+                }
             </div>
-            <div class="metric-value-bold mt-1">₹@Model.TodaySales.ToString("N0")</div>
-            <div class="metric-desc-bold mt-1">vs yesterday ₹@Model.YesterdaySales.ToString("N0")</div>
+            <div class="metric-value-bold mt-1" data-locale-currency="@Model.TodaySales">₹@Model.TodaySales.ToString("N0")</div>
+            <div class="metric-desc-bold mt-1">
+                <span data-i18n="dash.kpi.vsYesterday">vs yesterday</span> <span data-locale-currency="@Model.YesterdaySales">₹@Model.YesterdaySales.ToString("N0")</span>
+            </div>
         </div>
     </div>
 
     <!-- Card 2: Today's Orders -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="metric-card-clean metric-card-orders-border">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="metric-label metric-label-bold">TODAY'S ORDERS</span>
-                <span class="badge rounded-pill" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.72rem; font-weight: 800;">
+        <div class="metric-card-clean">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <span class="metric-label metric-label-bold" data-i18n="dash.kpi.todayOrders">TODAY'S ORDERS</span>
+                <span class="badge rounded-pill" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; font-weight: 800;" data-i18n="dash.kpi.live">
                     Live
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@Model.TodayOrdersCount</div>
-            <div class="metric-desc-bold mt-1">@Model.DineInOrdersCount dine-in &bull; @Model.TakeawayOrdersCount takeaway</div>
+            <div class="metric-value-bold mt-1" data-locale-number="@Model.TodayOrdersCount">@Model.TodayOrdersCount</div>
+            <div class="metric-desc-bold mt-1">
+                <span data-locale-number="@Model.DineInOrdersCount">@Model.DineInOrdersCount</span> <span data-i18n="dash.kpi.dineIn">dine-in</span> &bull; <span data-locale-number="@Model.TakeawayOrdersCount">@Model.TakeawayOrdersCount</span> <span data-i18n="dash.kpi.takeaway">takeaway</span>
+            </div>
         </div>
     </div>
 
     <!-- Card 3: Active Tables -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="metric-card-clean metric-card-tables-border">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="metric-label metric-label-bold">ACTIVE TABLES</span>
-                <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; font-size: 0.72rem; font-weight: 800;">
+        <div class="metric-card-clean">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <span class="metric-label metric-label-bold" data-i18n="dash.kpi.activeTables">ACTIVE TABLES</span>
+                <span class="badge rounded-pill" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-weight: 800;" data-i18n="dash.kpi.live">
                     Live
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@Model.OccupiedTablesCount / @Model.TotalTablesCount</div>
-            <div class="metric-desc-bold mt-1">@Model.AvailableTablesCount available &bull; @Model.ReservedTablesCount reserved</div>
+            <div class="metric-value-bold mt-1">
+                <span data-locale-number="@Model.OccupiedTablesCount">@Model.OccupiedTablesCount</span> / <span data-locale-number="@Model.TotalTablesCount">@Model.TotalTablesCount</span>
+            </div>
+            <div class="metric-desc-bold mt-1">
+                <span data-locale-number="@Model.AvailableTablesCount">@Model.AvailableTablesCount</span> <span data-i18n="dash.kpi.available">available</span> &bull; <span data-locale-number="@Model.ReservedTablesCount">@Model.ReservedTablesCount</span> <span data-i18n="dash.kpi.reserved">reserved</span>
+            </div>
         </div>
     </div>
 
     <!-- Card 4: Pending KOT -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="metric-card-clean metric-card-kot-border">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="metric-label metric-label-bold">PENDING KOT</span>
-                <span class="badge rounded-pill" style="background: #ffe4e6; color: #be123c; border: 1px solid #fecdd3; font-size: 0.72rem; font-weight: 800;">
+        <div class="metric-card-clean">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <span class="metric-label metric-label-bold" data-i18n="dash.kpi.pendingKot">PENDING KOT</span>
+                <span class="badge rounded-pill" style="background: #ffe4e6; color: #9f1239; border: 1px solid #fecdd3; font-weight: 800;" data-i18n="dash.kpi.kitchen">
                     Kitchen
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@Model.PendingKOTCount</div>
-            <div class="metric-desc-bold mt-1">In kitchen queue</div>
+            <div class="metric-value-bold mt-1" data-locale-number="@Model.PendingKOTCount">@Model.PendingKOTCount</div>
+            <div class="metric-desc-bold mt-1" data-i18n="dash.kpi.inKitchenQueue">In kitchen queue</div>
         </div>
     </div>
 
     <!-- Card 5: Completed -->
     <div class="col-xl col-md-4 col-sm-6">
-        <div class="metric-card-clean metric-card-completed-border">
-            <div class="d-flex justify-content-between align-items-center">
-                <span class="metric-label metric-label-bold">COMPLETED</span>
-                <span class="badge rounded-pill" style="background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; font-size: 0.72rem; font-weight: 800;">
+        <div class="metric-card-clean">
+            <div class="d-flex justify-content-between align-items-center gap-2">
+                <span class="metric-label metric-label-bold" data-i18n="dash.kpi.completed">COMPLETED</span>
+                <span class="badge rounded-pill" style="background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; font-weight: 800;" data-i18n="dash.kpi.settled">
                     Settled
                 </span>
             </div>
-            <div class="metric-value-bold mt-1">@Model.CompletedOrdersCount</div>
-            <div class="metric-desc-bold mt-1">Settled orders</div>
+            <div class="metric-value-bold mt-1" data-locale-number="@Model.CompletedOrdersCount">@Model.CompletedOrdersCount</div>
+            <div class="metric-desc-bold mt-1" data-i18n="dash.kpi.settledOrders">Settled orders</div>
         </div>
     </div>
 </div>
 
-<!-- Row 2: Dining Tables (8 cols) & Top Selling Items (4 cols) -->
+<!-- Row 2 (ABOVE THE FOLD): Recent Orders (5 rows) & Top Selling Items -->
 <div class="row g-4 mb-4 anim-section anim-delay-2">
-    <!-- Left Column: Dining Tables with EXACT 1-Point Border Thickness -->
-    <div class="col-lg-8">
-        <div class="dashboard-widget-card h-100">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <div class="d-flex align-items-center gap-2">
-                    <h5 class="fw-bold mb-0 text-dark">Dining Tables</h5>
-                    <span class="badge rounded-pill" style="background: #dcfce7; color: #15803d; font-weight: 600; font-size: 0.725rem;">
-                        @Model.AvailableTablesCount Available
-                    </span>
-                    <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; font-weight: 600; font-size: 0.725rem;">
-                        @Model.OccupiedTablesCount Occupied
-                    </span>
-                    <span class="badge rounded-pill" style="background: #e0f2fe; color: #0369a1; font-weight: 600; font-size: 0.725rem;">
-                        @Model.ReservedTablesCount Reserved
-                    </span>
-                    <span class="badge rounded-pill" style="background: #ede9fe; color: #6d28d9; border: 1.5px solid #c4b5fd; font-weight: 600; font-size: 0.725rem;">
-                        @Model.FloorTables.SelectMany(f => f.Tables).Count(t => t.Status == TableStatus.Billing) Billing
-                    </span>
-                </div>
-                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Cashier"))
-                {
-                    <div>
-                        <a href="/Tables" class="fw-bold text-decoration-none small" style="color: #047857;">
-                            All Floors & Tables
-                        </a>
-                    </div>
-                }
-            </div>
-
-            <!-- Table Cards Grid (3 Columns) with 1 point borders -->
-            <div class="row g-3">
-                @foreach (var floor in Model.FloorTables)
-                {
-                    @foreach (var table in floor.Tables)
-                    {
-                        string statusKey = table.Status switch {
-                            TableStatus.Available => "available",
-                            TableStatus.Occupied => "occupied",
-                            TableStatus.Reserved => "reserved",
-                            TableStatus.Billing => "billing",
-                            _ => "cleaning"
-                        };
-                        string cleanNum = (table.TableNumber ?? "").Replace("Table", "").Trim();
-
-                        <div class="col-md-4 col-sm-6">
-                            <div class="table-tile-card status-@statusKey">
-                                <!-- Top Row: Table Name & Status Badge -->
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold fs-6 text-dark">Table @cleanNum</span>
-                                    @if (table.Status == TableStatus.Available)
-                                    {
-                                        <span class="badge status-pill-available">AVAILABLE</span>
-                                    }
-                                    else if (table.Status == TableStatus.Occupied)
-                                    {
-                                        <span class="badge status-pill-occupied">OCCUPIED</span>
-                                    }
-                                    else if (table.Status == TableStatus.Reserved)
-                                    {
-                                        <span class="badge status-pill-reserved">RESERVED</span>
-                                    }
-                                    else if (table.Status == TableStatus.Billing)
-                                    {
-                                        <span class="badge status-pill-billing">BILLING</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge status-pill-cleaning">CLEANING</span>
-                                    }
-                                </div>
-
-                                <!-- Middle Row: Floor & Capacity -->
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span class="badge rounded-pill floor-pill">@floor.Name</span>
-                                    <span class="text-muted small">@table.Capacity Seats</span>
-                                </div>
-
-                                <!-- Bottom Status / Bill & Operator Buttons -->
-                                @if (table.Status == TableStatus.Available)
-                                {
-                                    <div class="text-muted small mb-2" style="font-size: 0.75rem;">Ready for guests</div>
-                                    <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn btn-sm w-100 rounded-pill text-white fw-bold py-1 btn-add-order">
-                                        <i class="fa-solid fa-plus me-1"></i> Add Order
-                                    </a>
-                                }
-                                else if (table.Status == TableStatus.Occupied)
-                                {
-                                    <div class="d-flex justify-content-between align-items-center mb-2 small">
-                                        <span class="text-muted">Bill</span>
-                                        @if (table.CurrentOrderAmount > 0)
-                                        {
-                                            <span class="fw-bold text-dark fs-6">₹@table.CurrentOrderAmount.ToString("N0")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-muted fw-semibold small fst-italic">No items yet</span>
-                                        }
-                                    </div>
-                                    <div class="d-flex gap-1">
-                                        <a href="/Orders/POS?tableId=@table.Id&orderId=@table.CurrentOrderId&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
-                                        <a href="/Tables/Details/@table.Id" class="btn btn-sm rounded-pill fw-bold btn-table-view px-2">View</a>
-                                        <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-bill px-3">Bill</a>
-                                    </div>
-                                }
-                                else if (table.Status == TableStatus.Reserved)
-                                {
-                                    <div class="text-muted small mb-2" style="font-size: 0.75rem;">Held for booking</div>
-                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm w-100 rounded-pill fw-bold py-1 btn-table-reserved">
-                                        Reserved Info
-                                    </a>
-                                }
-                                else if (table.Status == TableStatus.Billing)
-                                {
-                                    <div class="d-flex justify-content-between align-items-center mb-2 small">
-                                        <span class="text-muted">Bill</span>
-                                        <span class="fw-bold text-dark fs-6">₹@table.CurrentOrderAmount.ToString("N0")</span>
-                                    </div>
-                                    <div class="d-flex gap-1">
-                                        <a href="/Orders/POS?tableId=@table.Id&orderId=@table.CurrentOrderId&returnUrl=/Dashboard" class="btn btn-sm rounded-pill fw-bold btn-table-items flex-fill">+ Items</a>
-                                        <a href="/Tables/Details/@table.Id" class="btn btn-sm rounded-pill fw-bold btn-table-view px-2">View</a>
-                                        <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm rounded-pill text-white fw-bold btn-table-bill px-3">Bill</a>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="text-muted small mb-2" style="font-size: 0.75rem;">Cleaning in progress</div>
-                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm w-100 rounded-pill fw-bold py-1 btn-table-view">
-                                        Details
-                                    </a>
-                                }
-                            </div>
-                        </div>
-                    }
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- Right Column: Top Selling Items (4 cols) with Sleek Green Progress Bars -->
-    <div class="col-lg-4">
-        <div class="dashboard-widget-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-dark">Top Selling Items</h5>
-                <span class="badge rounded-pill bg-light text-muted border" style="font-size: 0.7rem;">7 days</span>
-            </div>
-
-            @{
-                var topItems = Model.TopSellingItems != null && Model.TopSellingItems.Any() 
-                    ? Model.TopSellingItems.Take(5).ToList() 
-                    : new List<TopSellingItemDto>();
-                int maxQty = topItems.Any() ? topItems.Max(x => x.TotalQuantitySold) : 1;
-                if (maxQty == 0) maxQty = 1;
-            }
-
-            @if (topItems.Any())
-            {
-                <div class="d-flex flex-column gap-3 mt-2">
-                    @for (int i = 0; i < topItems.Count; i++)
-                    {
-                        var item = topItems[i];
-                        int pct = (int)Math.Round((double)item.TotalQuantitySold / maxQty * 100);
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="small fw-semibold text-dark">@(i + 1). @item.MenuItemName</span>
-                                <span class="small text-muted fw-bold">@item.TotalQuantitySold <span class="text-success small fw-semibold">(@pct%)</span></span>
-                            </div>
-                            <div class="progress" style="height: 6px; background-color: #f1f5f9; border-radius: 4px;">
-                                <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: #059669; border-radius: 4px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5 text-muted">
-                    <i class="fa-solid fa-chart-simple fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                    <p class="small mb-0 text-muted">No sales recorded yet.</p>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-<!-- Row 3: Recent Orders Table (8 cols) & Order Status Donut Chart (4 cols) -->
-<div class="row g-4 mb-4 anim-section anim-delay-3">
-    <!-- Left Column: Recent Orders Datagrid with 1-Point Cell Borders -->
     <div class="col-lg-8">
         <div class="dashboard-widget-card h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-dark">Recent Orders</h5>
-                <a href="/Orders" class="fw-bold text-decoration-none small" style="color: #047857;">View all</a>
+                <h5 class="fw-bold mb-0" style="color: var(--brand-900);" data-i18n="dash.recentOrders">Recent Orders</h5>
+                <a href="/Orders" class="fw-bold text-decoration-none small" style="color: var(--brand-600);" data-i18n="dash.viewAll">View all</a>
             </div>
-
-            @{
-                var displayOrders = Model.RecentOrders != null && Model.RecentOrders.Any()
-                    ? Model.RecentOrders.Take(5).ToList()
-                    : new List<RecentOrderSummaryDto>();
-            }
 
             <div class="table-responsive">
                 <table class="table align-middle mb-0 dashboard-orders-table">
                     <thead>
                         <tr>
-                            <th>Order #</th>
-                            <th>Type</th>
-                            <th>Table</th>
-                            <th>Items</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Time</th>
+                            <th data-i18n="orders.col.orderNo">Order #</th>
+                            <th data-i18n="orders.col.type">Type</th>
+                            <th data-i18n="orders.col.table">Table</th>
+                            <th data-i18n="orders.col.items">Items</th>
+                            <th data-i18n="orders.col.amount">Amount</th>
+                            <th data-i18n="orders.col.status">Status</th>
+                            <th data-i18n="orders.col.time">Time</th>
                         </tr>
                     </thead>
                     <tbody>
                         @if (!displayOrders.Any())
                         {
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">
-                                    <i class="fa-solid fa-receipt fs-3 d-block mb-2 text-secondary opacity-50"></i>
-                                    <span class="small">No recent orders found</span>
+                                <td colspan="7" class="empty-state-compact border-0">
+                                    <svg class="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M4 3h16v18l-3-2-2 2-3-2-3 2-2-2-3 2V3z"></path>
+                                        <line x1="8" y1="8" x2="16" y2="8"></line>
+                                        <line x1="8" y1="12" x2="14" y2="12"></line>
+                                    </svg>
+                                    <div class="small fw-semibold" data-i18n="dash.noRecentOrders">No recent orders found</div>
                                 </td>
                             </tr>
                         }
@@ -385,28 +266,33 @@
                             @foreach (var ord in displayOrders)
                             {
                                 string badgeStyle = ord.Status switch {
-                                    "Confirmed" => "background: #e0f2fe; color: #0284c7; border: 1pt solid #bae6fd;",
-                                    "Ready" => "background: #dcfce7; color: #16a34a; border: 1pt solid #bbf7d0;",
-                                    "Served" => "background: #f3e8ff; color: #7e22ce; border: 1pt solid #e9d5ff;",
-                                    "Preparing" => "background: #fef3c7; color: #d97706; border: 1pt solid #fde68a;",
-                                    _ => "background: #f1f5f9; color: #475569; border: 1pt solid #e2e8f0;"
+                                    "Confirmed" => "background: #E8F0FE; color: #1E40AF; border: 1px solid #93C5FD;",
+                                    "Ready" => "background: var(--status-available-bg); color: var(--status-available-text); border: 1px solid var(--status-available-border);",
+                                    "Served" => "background: var(--status-billing-bg); color: var(--status-billing-text); border: 1px solid var(--status-billing-border);",
+                                    "Preparing" => "background: var(--status-occupied-bg); color: var(--status-occupied-text); border: 1px solid var(--status-occupied-border);",
+                                    "Completed" => "background: var(--status-available-bg); color: var(--status-available-text); border: 1px solid var(--status-available-border);",
+                                    "Cancelled" => "background: var(--status-alert-bg); color: var(--status-alert-text); border: 1px solid var(--status-alert-border);",
+                                    _ => "background: var(--brand-100); color: var(--brand-900); border: 1px solid var(--border-color);"
                                 };
 
-                                string orderTypeDisplay = (ord.OrderType == "DineIn" || ord.OrderType == "Dine-In") ? "Dine-in" : ord.OrderType;
+                                string orderTypeKey = (ord.OrderType == "DineIn" || ord.OrderType == "Dine-in")
+                                    ? "orders.type.dineIn"
+                                    : (ord.OrderType == "Takeaway" ? "orders.type.takeaway" : "orders.type.delivery");
+                                string statusI18nKey = "status." + ord.Status.ToLowerInvariant();
                                 string tableDisplay = string.IsNullOrEmpty(ord.TableNumber) ? "-" : "T" + ord.TableNumber.Replace("Table", "").Trim();
 
                                 <tr>
-                                    <td class="fw-bold text-dark">#@ord.OrderNumber</td>
-                                    <td class="text-secondary small">@orderTypeDisplay</td>
-                                    <td class="text-secondary small">@tableDisplay</td>
-                                    <td class="text-secondary small">@ord.TotalItems</td>
-                                    <td class="fw-bold text-dark small">₹@ord.GrandTotal.ToString("N0")</td>
+                                    <td class="fw-bold" style="color: var(--brand-900);" data-locale-digits="#@ord.OrderNumber">#@ord.OrderNumber</td>
+                                    <td class="text-secondary small" data-i18n="@orderTypeKey">@ord.OrderType</td>
+                                    <td class="text-secondary small" data-locale-digits="@tableDisplay">@tableDisplay</td>
+                                    <td class="text-secondary small" data-locale-number="@ord.TotalItems">@ord.TotalItems</td>
+                                    <td class="fw-bold small" style="color: var(--brand-900);" data-locale-currency="@ord.GrandTotal">₹@ord.GrandTotal.ToString("N0")</td>
                                     <td>
-                                        <span class="badge rounded-pill" style="@badgeStyle font-size: 0.7rem; font-weight: 600;">
+                                        <span class="badge rounded-pill" style="@badgeStyle font-weight: 700;" data-i18n="@statusI18nKey">
                                             @ord.Status
                                         </span>
                                     </td>
-                                    <td class="text-muted small">@ord.CreatedAt.ToString("hh:mm tt")</td>
+                                    <td class="text-secondary small" data-locale-time="@ord.CreatedAt.ToString("O")">@ord.CreatedAt.ToString("hh:mm tt")</td>
                                 </tr>
                             }
                         }
@@ -416,69 +302,265 @@
         </div>
     </div>
 
-    <!-- Right Column: Order Status Donut Chart with Breakdown Legend -->
+    <!-- Top Selling Items (Reduced Empty Height + Muted Green Line SVG) -->
     <div class="col-lg-4">
         <div class="dashboard-widget-card h-100">
-            <h5 class="fw-bold mb-3 text-dark">Order Status</h5>
-
-            @{
-                int statusTotal = Model.NewOrdersCount + Model.PreparingOrdersCount + Model.ReadyOrdersCount + Model.ServedOrdersCount + Model.CancelledOrdersCount;
-                int newPct = statusTotal > 0 ? (int)Math.Round((double)Model.NewOrdersCount / statusTotal * 100) : 0;
-                int prepPct = statusTotal > 0 ? (int)Math.Round((double)Model.PreparingOrdersCount / statusTotal * 100) : 0;
-                int readyPct = statusTotal > 0 ? (int)Math.Round((double)Model.ReadyOrdersCount / statusTotal * 100) : 0;
-                int servedPct = statusTotal > 0 ? (int)Math.Round((double)Model.ServedOrdersCount / statusTotal * 100) : 0;
-                int cancelPct = statusTotal > 0 ? (int)Math.Round((double)Model.CancelledOrdersCount / statusTotal * 100) : 0;
-            }
-
-            <div class="d-flex align-items-center justify-content-between mt-2">
-                <div style="position: relative; width: 140px; height: 140px; flex-shrink: 0;">
-                    <canvas id="orderStatusDonutChart"></canvas>
-                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                        <div class="fs-4 fw-bold text-dark" style="line-height: 1.1;">@statusTotal</div>
-                        <div class="text-muted" style="font-size: 0.65rem;">Total orders</div>
-                    </div>
-                </div>
-
-                <div class="d-flex flex-column gap-2 small ps-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3b82f6;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">New: <strong>@Model.NewOrdersCount</strong> &bull; @newPct%</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Preparing: <strong>@Model.PreparingOrdersCount</strong> &bull; @prepPct%</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Ready: <strong>@Model.ReadyOrdersCount</strong> &bull; @readyPct%</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#8b5cf6;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Served: <strong>@Model.ServedOrdersCount</strong> &bull; @servedPct%</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444;"></span>
-                        <span class="text-secondary" style="font-size: 0.75rem;">Cancelled: <strong>@Model.CancelledOrdersCount</strong> &bull; @cancelPct%</span>
-                    </div>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark" data-i18n="dash.topSellingItems">Top Selling Items</h5>
+                <span class="badge rounded-pill bg-light text-secondary border" data-i18n="dash.days7">7 days</span>
             </div>
+
+            @if (topItems.Any())
+            {
+                <div class="d-flex flex-column gap-3 mt-1">
+                    @for (int i = 0; i < topItems.Count; i++)
+                    {
+                        var item = topItems[i];
+                        int pct = (int)Math.Round((double)item.TotalQuantitySold / maxQty * 100);
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-1 gap-2">
+                                <span class="small fw-semibold" style="color: var(--brand-900);">
+                                    <span data-locale-number="@(i + 1)">@(i + 1)</span>. <span data-i18n-dynamic data-name-en="@item.MenuItemName" data-name-mr="@(item.MenuItemNameMr ?? "")">@item.MenuItemName</span>
+                                </span>
+                                <span class="small text-secondary fw-bold text-nowrap">
+                                    <span data-locale-number="@item.TotalQuantitySold">@item.TotalQuantitySold</span>
+                                    <span class="small fw-semibold" style="color: var(--leaf);">(<span data-locale-number="@pct">@pct</span>%)</span>
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 6px; background-color: var(--brand-100); border-radius: 4px;">
+                                <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: var(--brand-600); border-radius: 4px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state-compact">
+                    <svg class="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <p class="small mb-0 fw-semibold" data-i18n="dash.noSalesYet">No sales recorded yet.</p>
+                </div>
+            }
         </div>
     </div>
 </div>
 
-<!-- Row 4: Employee Attendance Bar Chart (8 cols) & Quick Actions (4 cols) -->
-<div class="row g-4 mb-4 anim-section anim-delay-4">
-    <!-- Left Column: Employee Attendance Double Bar Chart -->
+<!-- Row 3: Dining Tables (Sorted Numerically, 1/3 Shorter Tiles, Floor & Status Filters) & Order Status -->
+<div class="row g-4 mb-4 anim-section anim-delay-3">
     <div class="col-lg-8">
         <div class="dashboard-widget-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-dark">Employee Attendance</h5>
-                <div>
-                    <span class="badge rounded-pill" style="background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 600;">
-                        On Duty: @(Model.PresentStaffCount > 0 ? Model.PresentStaffCount : 8)
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <h5 class="fw-bold mb-0 text-dark" data-i18n="dash.diningTables">Dining Tables</h5>
+                    <span class="badge status-pill-available">
+                        <span data-locale-number="@Model.AvailableTablesCount">@Model.AvailableTablesCount</span> <span data-i18n="table.available">Available</span>
                     </span>
-                    <span class="badge rounded-pill bg-light text-muted border ms-1" style="font-size: 0.75rem;">
-                        Total: @(Model.TotalStaffCount > 0 ? Model.TotalStaffCount : 8)
+                    <span class="badge status-pill-occupied">
+                        <span data-locale-number="@Model.OccupiedTablesCount">@Model.OccupiedTablesCount</span> <span data-i18n="table.occupied">Occupied</span>
+                    </span>
+                    <span class="badge status-pill-reserved">
+                        <span data-locale-number="@Model.ReservedTablesCount">@Model.ReservedTablesCount</span> <span data-i18n="table.reserved">Reserved</span>
+                    </span>
+                    <span class="badge status-pill-billing">
+                        <span data-locale-number="@billingTablesCount">@billingTablesCount</span> <span data-i18n="table.billing">Billing</span>
+                    </span>
+                </div>
+                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Waiter") || User.IsInRole("Cashier"))
+                {
+                    <a href="/Tables" class="fw-bold text-decoration-none small" style="color: var(--brand-600);" data-i18n="dash.allFloorsTables">
+                        All Floors &amp; Tables
+                    </a>
+                }
+            </div>
+
+            <!-- Floor Filter Chips in Status Row -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-2 border-bottom">
+                <button type="button" class="filter-chip-btn active js-floor-chip" data-floor="all" data-i18n="dash.allFloors" onclick="filterDashboardTables('all', this)">
+                    All
+                </button>
+                @foreach (var floor in Model.FloorTables)
+                {
+                    <button type="button" class="filter-chip-btn js-floor-chip" data-floor="@floor.Id" onclick="filterDashboardTables('@floor.Id', this)">
+                        <span data-i18n-dynamic data-name-en="@floor.Name" data-name-mr="@(floor.NameMr ?? "")">@floor.Name</span>
+                    </button>
+                }
+            </div>
+
+            <!-- Sorted Dining Tables Grid -->
+            <div class="row g-2" id="dashboardTablesGrid">
+                @foreach (var table in sortedTables)
+                {
+                    string statusKey = table.Status switch {
+                        TableStatus.Available => "available",
+                        TableStatus.Occupied => "occupied",
+                        TableStatus.Reserved => "reserved",
+                        TableStatus.Billing => "billing",
+                        _ => "cleaning"
+                    };
+                    string statusI18nKey = "table." + statusKey;
+                    string cleanNum = (table.TableNumber ?? "").Replace("Table", "").Trim();
+                    string tileTargetUrl = table.Status == TableStatus.Available
+                        ? $"/Orders/POS?tableId={table.Id}&returnUrl=/Dashboard"
+                        : $"/Tables/Details/{table.Id}";
+
+                    <div class="col-md-4 col-sm-6 js-table-tile-col" data-floor-id="@table.FloorId">
+                        <div class="table-tile-card status-@statusKey"
+                             role="button"
+                             tabindex="0"
+                             onclick="if(!event.target.closest('a, button')) { window.location.href='@tileTargetUrl'; }"
+                             onkeydown="if((event.key==='Enter'||event.key===' ') && !event.target.closest('a, button')){ event.preventDefault(); window.location.href='@tileTargetUrl'; }">
+                            <!-- Row 1: Table Name & Status Badge -->
+                            <div class="d-flex justify-content-between align-items-center gap-1">
+                                <span class="fw-bold" style="color: var(--brand-900);" data-i18n-table data-table-num="@cleanNum" data-name-mr="@(table.NameMr ?? "")">
+                                    Table @cleanNum
+                                </span>
+                                <span class="badge status-pill-@statusKey" data-i18n="@statusI18nKey">@table.StatusName</span>
+                            </div>
+
+                            <!-- Row 2: Floor & Seats -->
+                            <div class="d-flex justify-content-between align-items-center gap-1">
+                                <span class="badge rounded-pill floor-pill" data-i18n-dynamic data-name-en="@table.FloorName" data-name-mr="@(table.FloorNameMr ?? "")">@table.FloorName</span>
+                                <span class="text-secondary small fw-semibold">
+                                    <span data-locale-number="@table.Capacity">@table.Capacity</span> <span data-i18n="table.seats">Seats</span>
+                                </span>
+                            </div>
+
+                            <!-- Row 3: Compact Footer -->
+                            @if (table.Status == TableStatus.Available)
+                            {
+                                <div class="d-flex justify-content-end pt-1">
+                                    <a href="/Orders/POS?tableId=@table.Id&returnUrl=/Dashboard" class="btn-tile-order">
+                                        <i class="fa-solid fa-plus"></i>
+                                        <span data-i18n="table.addOrder">Add Order</span>
+                                    </a>
+                                </div>
+                            }
+                            else if (table.Status == TableStatus.Occupied || table.Status == TableStatus.Billing)
+                            {
+                                <div class="d-flex justify-content-between align-items-center small pt-1">
+                                    <span class="text-secondary fw-semibold">
+                                        <i class="fa-regular fa-clock me-1"></i>
+                                        @if (table.CurrentOrderCreatedAt.HasValue)
+                                        {
+                                            <span data-locale-time="@table.CurrentOrderCreatedAt.Value.ToString("O")">@table.CurrentOrderCreatedAt.Value.ToLocalTime().ToString("hh:mm tt")</span>
+                                        }
+                                        else
+                                        {
+                                            <span data-i18n="table.justNow">Just now</span>
+                                        }
+                                    </span>
+                                    @if (table.CurrentOrderAmount > 0)
+                                    {
+                                        <span class="fw-bold text-dark" data-locale-currency="@table.CurrentOrderAmount">₹@table.CurrentOrderAmount.ToString("N0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary small fst-italic" data-i18n="table.noItemsYet">No items yet</span>
+                                    }
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <a href="/Orders/POS?tableId=@table.Id&orderId=@table.CurrentOrderId&returnUrl=/Dashboard" class="btn btn-sm btn-table-items flex-fill" data-i18n="table.addItemsShort">+ Items</a>
+                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-table-view" data-i18n="table.view">View</a>
+                                    <a href="/Billing/Generate?orderId=@table.CurrentOrderId" class="btn btn-sm btn-table-bill" data-i18n="table.bill">Bill</a>
+                                </div>
+                            }
+                            else if (table.Status == TableStatus.Reserved)
+                            {
+                                <div class="d-flex justify-content-between align-items-center pt-1">
+                                    <span class="text-secondary small fw-semibold" data-i18n="table.heldForBooking">Held for booking</span>
+                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-table-reserved" data-i18n="table.reservedInfo">Reserved Info</a>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex justify-content-between align-items-center pt-1">
+                                    <span class="text-secondary small fw-semibold" data-i18n="table.cleaningInProgress">Cleaning in progress</span>
+                                    <a href="/Tables/Details/@table.Id" class="btn btn-sm btn-table-view" data-i18n="table.details">Details</a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Status Widget (Compact Empty State with Muted Green SVG) -->
+    <div class="col-lg-4">
+        <div class="dashboard-widget-card h-100">
+            <h5 class="fw-bold mb-3 text-dark" data-i18n="dash.orderStatus">Order Status</h5>
+
+            @if (statusTotal == 0)
+            {
+                <div class="empty-state-compact">
+                    <svg class="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M12 3v9l6 3"></path>
+                    </svg>
+                    <p class="small mb-0 fw-semibold" data-i18n="dash.noActiveOrdersStatus">No active orders yet.</p>
+                </div>
+            }
+            else
+            {
+                int newPct = (int)Math.Round((double)Model.NewOrdersCount / statusTotal * 100);
+                int prepPct = (int)Math.Round((double)Model.PreparingOrdersCount / statusTotal * 100);
+                int readyPct = (int)Math.Round((double)Model.ReadyOrdersCount / statusTotal * 100);
+                int servedPct = (int)Math.Round((double)Model.ServedOrdersCount / statusTotal * 100);
+                int cancelPct = (int)Math.Round((double)Model.CancelledOrdersCount / statusTotal * 100);
+
+                <div class="d-flex align-items-center justify-content-between mt-2 gap-2">
+                    <div style="position: relative; width: 136px; height: 136px; flex-shrink: 0;">
+                        <canvas id="orderStatusDonutChart"></canvas>
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                            <div class="fs-4 fw-bold text-dark" style="line-height: 1.1;" data-locale-number="@statusTotal">@statusTotal</div>
+                            <div class="text-secondary" style="font-size: 0.72rem;" data-i18n="dash.totalOrders">Total orders</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2 small ps-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2563EB;"></span>
+                            <span class="text-secondary"><span data-i18n="status.new">New</span>: <strong data-locale-number="@Model.NewOrdersCount">@Model.NewOrdersCount</strong> &bull; <span data-locale-number="@newPct">@newPct</span>%</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#D97706;"></span>
+                            <span class="text-secondary"><span data-i18n="status.preparing">Preparing</span>: <strong data-locale-number="@Model.PreparingOrdersCount">@Model.PreparingOrdersCount</strong> &bull; <span data-locale-number="@prepPct">@prepPct</span>%</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#6B7F3A;"></span>
+                            <span class="text-secondary"><span data-i18n="status.ready">Ready</span>: <strong data-locale-number="@Model.ReadyOrdersCount">@Model.ReadyOrdersCount</strong> &bull; <span data-locale-number="@readyPct">@readyPct</span>%</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#7C3AED;"></span>
+                            <span class="text-secondary"><span data-i18n="status.served">Served</span>: <strong data-locale-number="@Model.ServedOrdersCount">@Model.ServedOrdersCount</strong> &bull; <span data-locale-number="@servedPct">@servedPct</span>%</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#DC2626;"></span>
+                            <span class="text-secondary"><span data-i18n="status.cancelled">Cancelled</span>: <strong data-locale-number="@Model.CancelledOrdersCount">@Model.CancelledOrdersCount</strong> &bull; <span data-locale-number="@cancelPct">@cancelPct</span>%</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Row 4: Employee Attendance & Quick Actions -->
+<div class="row g-4 mb-4 anim-section anim-delay-4">
+    <div class="col-lg-8">
+        <div class="dashboard-widget-card h-100">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h5 class="fw-bold mb-0" style="color: var(--brand-900);" data-i18n="dash.employeeAttendance">Employee Attendance</h5>
+                <div>
+                    <span class="badge rounded-pill status-pill-available">
+                        <span data-i18n="dash.onDuty">On Duty</span>: <span data-locale-number="@(Model.PresentStaffCount > 0 ? Model.PresentStaffCount : 8)">@(Model.PresentStaffCount > 0 ? Model.PresentStaffCount : 8)</span>
+                    </span>
+                    <span class="badge rounded-pill ms-1" style="background: var(--brand-100); color: var(--brand-900); border: 1px solid var(--border-color); font-weight: 700;">
+                        <span data-i18n="dash.total">Total</span>: <span data-locale-number="@(Model.TotalStaffCount > 0 ? Model.TotalStaffCount : 8)">@(Model.TotalStaffCount > 0 ? Model.TotalStaffCount : 8)</span>
                     </span>
                 </div>
             </div>
@@ -487,50 +569,53 @@
                 <canvas id="employeeAttendanceBarChart"></canvas>
             </div>
 
-            <div class="d-flex justify-content-center align-items-center gap-4 mt-2 small text-muted" style="font-size: 0.75rem;">
-                <div class="d-flex align-items-center gap-1">
-                    <span style="display:inline-block; width:10px; height:10px; background:#10b981;"></span>
-                    <span>On duty (present)</span>
+            <div class="d-flex flex-wrap justify-content-center align-items-center gap-4 mt-2 small text-secondary">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="display:inline-block; width:10px; height:10px; background:#A94E23;"></span>
+                    <span data-i18n="dash.onDutyPresent">On duty (present)</span>
                 </div>
-                <div class="d-flex align-items-center gap-1">
-                    <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1;"></span>
-                    <span>Total registered staff</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="display:inline-block; width:10px; height:10px; background:#D9BEA0;"></span>
+                    <span data-i18n="dash.totalRegisteredStaff">Total registered staff</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Right Column: Quick Actions Vertical Action Buttons -->
+    <!-- Quick Actions -->
     <div class="col-lg-4">
         <div class="dashboard-widget-card h-100">
-            <h5 class="fw-bold mb-3 text-dark">Quick Actions</h5>
+            <h5 class="fw-bold mb-3" style="color: var(--brand-900);" data-i18n="dash.quickActions">Quick Actions</h5>
 
             <div class="d-flex flex-column gap-2">
-                <a href="/Orders/POS?returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: #00796b;">
-                    <i class="fa-solid fa-plus"></i> New Order
+                <a href="/Orders/POS?returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: var(--brand-600);">
+                    <i class="fa-solid fa-plus"></i>
+                    <span data-i18n="header.newOrder">New Order</span>
                 </a>
-                <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: #c2410c;">
-                    <i class="fa-solid fa-plus"></i> Add Menu Item
+                <a href="/Masters?tab=menu&openAdd=true&returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: var(--brand-700);">
+                    <i class="fa-solid fa-plus"></i>
+                    <span data-i18n="dash.addMenuItem">Add Menu Item</span>
                 </a>
-                <a href="/Masters?tab=employee&openAdd=true&returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: #6d28d9;">
-                    <i class="fa-solid fa-plus"></i> Add Employee
+                <a href="/Masters?tab=employee&openAdd=true&returnUrl=/Dashboard" class="btn text-white quick-action-btn-styled" style="background-color: var(--brand-900);">
+                    <i class="fa-solid fa-plus"></i>
+                    <span data-i18n="dash.addEmployee">Add Employee</span>
                 </a>
-                <a href="/Reports" class="btn text-white quick-action-btn-styled" style="background-color: #1d4ed8;">
-                    <i class="fa-solid fa-square-poll-vertical"></i> View Reports
+                <a href="/Reports" class="btn text-white quick-action-btn-styled" style="background-color: var(--leaf);">
+                    <i class="fa-solid fa-square-poll-vertical"></i>
+                    <span data-i18n="dash.viewReports">View Reports</span>
                 </a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Row 5: Sales Overview Area Chart (8 cols) & Inventory Alerts (4 cols) -->
+<!-- Row 5: Sales Overview & Inventory Alerts -->
 <div class="row g-4 mb-4 anim-section anim-delay-5">
-    <!-- Left Column: Sales Overview Area Trend -->
     <div class="col-lg-8">
         <div class="dashboard-widget-card h-100">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0 text-dark">Sales Overview</h5>
-                <span class="badge rounded-pill bg-light text-muted border" style="font-size: 0.7rem;">Last 7 days</span>
+                <h5 class="fw-bold mb-0" style="color: var(--brand-900);" data-i18n="dash.salesOverview">Sales Overview</h5>
+                <span class="badge rounded-pill" style="background: var(--brand-100); color: var(--brand-900); border: 1px solid var(--border-color);" data-i18n="dash.last7Days">Last 7 days</span>
             </div>
 
             <div style="height: 220px; width: 100%;">
@@ -539,10 +624,9 @@
         </div>
     </div>
 
-    <!-- Right Column: Inventory Alerts -->
     <div class="col-lg-4">
         <div class="dashboard-widget-card h-100">
-            <h5 class="fw-bold mb-3 text-dark">Inventory Alerts</h5>
+            <h5 class="fw-bold mb-3" style="color: var(--brand-900);" data-i18n="dash.inventoryAlerts">Inventory Alerts</h5>
 
             <div class="d-flex flex-column gap-3 mt-1">
                 @if (Model.LowStockAlerts != null && Model.LowStockAlerts.Any())
@@ -551,10 +635,10 @@
                     {
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="fw-bold text-dark small">@alert.ItemName</span>
-                                <span class="text-muted small"> : @alert.CurrentStock @alert.Unit</span>
+                                <span class="fw-bold small" style="color: var(--brand-900);">@alert.ItemName</span>
+                                <span class="text-secondary small"> : <span data-locale-number="@alert.CurrentStock">@alert.CurrentStock</span> @alert.Unit</span>
                             </div>
-                            <span class="badge rounded-pill" style="@(alert.AlertLevel == "Critical" ? "background: #fee2e2; color: #dc2626;" : "background: #fef3c7; color: #b45309;") font-size: 0.7rem; font-weight: 600;">
+                            <span class="badge rounded-pill" style="@(alert.AlertLevel == "Critical" ? "background: #fee2e2; color: #b91c1c;" : "background: #fef3c7; color: #92400e;") font-weight: 700;">
                                 @alert.AlertLevel
                             </span>
                         </div>
@@ -562,9 +646,13 @@
                 }
                 else
                 {
-                    <div class="text-center py-4 text-muted">
-                        <i class="fa-solid fa-boxes-stacked fs-2 d-block mb-2 text-secondary opacity-50"></i>
-                        <p class="small mb-0 text-muted">All inventory items sufficiently stocked.</p>
+                    <div class="empty-state-compact">
+                        <svg class="empty-state-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <p class="small mb-0 fw-semibold" data-i18n="dash.allStocked">All inventory items sufficiently stocked.</p>
                     </div>
                 }
             </div>
@@ -574,32 +662,57 @@
 
 @section Scripts {
 <script>
+    function filterDashboardTables(floorId, btn) {
+        document.querySelectorAll('.js-floor-chip').forEach(c => c.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+
+        document.querySelectorAll('#dashboardTablesGrid .js-table-tile-col').forEach(col => {
+            const colFloor = col.getAttribute('data-floor-id');
+            col.classList.toggle('d-none', floorId !== 'all' && colFloor !== String(floorId));
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
-        // 1. Live Clock for Header
+        let donutChart = null;
+        let barChart = null;
+        let areaChart = null;
+
         function updateHeaderClock() {
-            const now = new Date();
             const elem = document.getElementById('headerClockDate');
             if (elem) {
-                const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' });
-                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-                elem.textContent = `${dateStr} - ${timeStr}`;
+                elem.textContent = I18n.formatDateTime(new Date(), {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
             }
         }
         setInterval(updateHeaderClock, 1000);
         updateHeaderClock();
 
-        // 2. Order Status Donut Chart
+        function applyDashboardLocaleNumbers() {
+            document.querySelectorAll('[data-locale-number]').forEach(el => {
+                el.textContent = I18n.formatNumber(el.getAttribute('data-locale-number'));
+            });
+            document.querySelectorAll('[data-locale-currency]').forEach(el => {
+                el.textContent = I18n.formatCurrency(el.getAttribute('data-locale-currency'));
+            });
+        }
+
         const donutCtx = document.getElementById('orderStatusDonutChart');
         if (donutCtx) {
             const counts = [@Model.NewOrdersCount, @Model.PreparingOrdersCount, @Model.ReadyOrdersCount, @Model.ServedOrdersCount, @Model.CancelledOrdersCount];
-            const hasOrders = counts.some(c => c > 0);
-            new Chart(donutCtx, {
+            donutChart = new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['New', 'Preparing', 'Ready', 'Served', 'Cancelled'],
+                    labels: [I18n.t('status.new'), I18n.t('status.preparing'), I18n.t('status.ready'), I18n.t('status.served'), I18n.t('status.cancelled')],
                     datasets: [{
-                        data: hasOrders ? counts : [0, 0, 0, 0, 0],
-                        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444'],
+                        data: counts,
+                        backgroundColor: ['#2563EB', '#D97706', '#6B7F3A', '#7C3AED', '#DC2626'],
                         borderWidth: 2,
                         borderColor: '#ffffff'
                     }]
@@ -612,8 +725,8 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    return ` ${context.label}: ${context.raw} orders`;
+                                label: function (context) {
+                                    return ` ${context.label}: ${I18n.formatNumber(context.raw)} ${I18n.t('dash.ordersUnit')}`;
                                 }
                             }
                         }
@@ -622,81 +735,104 @@
             });
         }
 
-        // 3. Employee Attendance Double Bar Chart
+        function translateStaffRoleLabel(raw) {
+            const norm = String(raw || '').toLowerCase().replace(/[^a-z]/g, '');
+            const map = {
+                admin: 'role.admin',
+                administrator: 'role.administrator',
+                manager: 'role.manager',
+                managers: 'role.manager',
+                cashier: 'role.cashier',
+                cashiers: 'role.cashier',
+                waiter: 'role.waiter',
+                waiters: 'role.waiter',
+                kitchen: 'role.kitchen',
+                kitchenstaff: 'role.kitchenstaff',
+                chefcooks: 'role.cook',
+                chefscooks: 'role.cook',
+                cook: 'role.cook',
+                inventorystaff: 'role.inventorystaff',
+                housekeeping: 'role.housekeeping'
+            };
+            const key = map[norm];
+            return key ? I18n.t(key) : raw;
+        }
+
         const barCtx = document.getElementById('employeeAttendanceBarChart');
+        let rawStaffLabels = [];
         if (barCtx) {
-            const staffLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.RoleName)));
+            const serverLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.RoleName)));
+            rawStaffLabels = serverLabels.length ? serverLabels : ['Manager', 'Cook', 'Waiter', 'Housekeeping', 'Cashier'];
             const staffPresent = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.PresentCount)));
             const staffTotal = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StaffRoleAttendance.Select(s => s.TotalCount)));
 
-            new Chart(barCtx, {
+            barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
-                    labels: staffLabels.length ? staffLabels : ['Managers', 'Chefs / Cooks', 'Waiters', 'Housekeeping', 'Cashiers'],
+                    labels: rawStaffLabels.map(translateStaffRoleLabel),
                     datasets: [
                         {
-                            label: 'On duty (present)',
+                            label: I18n.t('dash.onDutyPresent'),
                             data: staffPresent.length ? staffPresent : [1, 2, 2, 2, 1],
-                            backgroundColor: '#10b981',
-                            borderRadius: 3,
+                            backgroundColor: '#A94E23',
+                            borderRadius: 4,
                             barThickness: 16,
-                            maxBarThickness: 18,
-                            barPercentage: 0.5,
-                            categoryPercentage: 0.6
+                            maxBarThickness: 18
                         },
                         {
-                            label: 'Total registered staff',
+                            label: I18n.t('dash.totalRegisteredStaff'),
                             data: staffTotal.length ? staffTotal : [1, 2, 2, 2, 1],
-                            backgroundColor: '#cbd5e1',
-                            borderRadius: 3,
+                            backgroundColor: '#D9BEA0',
+                            borderRadius: 4,
                             barThickness: 16,
-                            maxBarThickness: 18,
-                            barPercentage: 0.5,
-                            categoryPercentage: 0.6
+                            maxBarThickness: 18
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { weight: '600', size: 11 } }
-                        },
+                        x: { grid: { display: false }, ticks: { color: '#3B2216', font: { weight: '600', size: 12 } } },
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1, precision: 0 },
-                            grid: { color: '#f1f5f9' }
+                            ticks: {
+                                stepSize: 1,
+                                precision: 0,
+                                color: '#7A6352',
+                                callback: function (val) { return I18n.formatNumber(val); }
+                            },
+                            grid: { color: '#F6E4D3' }
                         }
                     }
                 }
             });
         }
 
-        // 4. Sales Overview Smooth Green Area Chart
         const areaCtx = document.getElementById('salesOverviewAreaChart');
         if (areaCtx) {
-            const trendLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySalesTrend.Select(w => w.Date.ToString("MMM dd"))));
+            const rawDates = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySalesTrend.Select(w => w.Date.ToString("O"))));
             const trendData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.WeeklySalesTrend.Select(w => w.SalesAmount)));
 
-            new Chart(areaCtx, {
+            function getTrendLabels() {
+                return rawDates.map(d => I18n.formatDate(d, { month: 'short', day: '2-digit' }));
+            }
+
+            areaChart = new Chart(areaCtx, {
                 type: 'line',
                 data: {
-                    labels: trendLabels,
+                    labels: getTrendLabels(),
                     datasets: [{
-                        label: 'Sales Revenue',
+                        label: I18n.t('dash.salesRevenue'),
                         data: trendData,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                        borderColor: '#A94E23',
+                        backgroundColor: 'rgba(169, 78, 35, 0.14)',
                         fill: true,
                         tension: 0.35,
                         borderWidth: 2.5,
                         pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#10b981',
+                        pointBorderColor: '#A94E23',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         pointHoverRadius: 6
@@ -709,30 +845,53 @@
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    return ' ₹' + Number(context.raw).toLocaleString();
+                                label: function (context) {
+                                    return ' ' + I18n.formatCurrency(context.raw);
                                 }
                             }
                         }
                     },
                     scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: { font: { weight: '500', size: 11 } }
-                        },
+                        x: { grid: { display: false }, ticks: { color: '#3B2216', font: { weight: '500', size: 12 } } },
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function(val) {
-                                    return val === 0 ? '₹0' : '₹' + Number(val).toLocaleString();
+                                color: '#7A6352',
+                                callback: function (val) {
+                                    return I18n.formatCurrency(val);
                                 }
                             },
-                            grid: { color: '#f1f5f9' }
+                            grid: { color: '#F6E4D3' }
                         }
                     }
                 }
             });
+
+            I18n.onLanguageChange(function () {
+                updateHeaderClock();
+                applyDashboardLocaleNumbers();
+                if (donutChart) {
+                    donutChart.data.labels = [I18n.t('status.new'), I18n.t('status.preparing'), I18n.t('status.ready'), I18n.t('status.served'), I18n.t('status.cancelled')];
+                    donutChart.update();
+                }
+                if (barChart) {
+                    barChart.data.labels = rawStaffLabels.map(translateStaffRoleLabel);
+                    barChart.data.datasets[0].label = I18n.t('dash.onDutyPresent');
+                    barChart.data.datasets[1].label = I18n.t('dash.totalRegisteredStaff');
+                    barChart.update();
+                }
+                areaChart.data.labels = getTrendLabels();
+                areaChart.data.datasets[0].label = I18n.t('dash.salesRevenue');
+                areaChart.update();
+            });
+        } else {
+            I18n.onLanguageChange(function () {
+                updateHeaderClock();
+                applyDashboardLocaleNumbers();
+            });
         }
+
+        applyDashboardLocaleNumbers();
     });
 </script>
 }

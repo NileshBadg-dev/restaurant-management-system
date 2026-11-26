@@ -8,6 +8,7 @@ using RestaurantManagement.Application.Interfaces;
 using RestaurantManagement.Domain.Entities;
 using RestaurantManagement.Domain.Enums;
 using RestaurantManagement.Web.Models;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -15,24 +16,26 @@ public class AccountController : Controller
 {
     private readonly IAuthService _authService;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IWebConfigCacheService _configCache;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         IAuthService authService,
         IUnitOfWork unitOfWork,
+        IWebConfigCacheService configCache,
         ILogger<AccountController> logger)
     {
         _authService = authService;
         _unitOfWork = unitOfWork;
+        _configCache = configCache;
         _logger = logger;
     }
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> Login(string? returnUrl = null, bool switchUser = false)
+    public async Task<IActionResult> Login(string? returnUrl = null)
     {
-        // If already signed in and not explicitly switching user, proceed to Dashboard
-        if (User.Identity?.IsAuthenticated == true && !switchUser)
+        if (User.Identity?.IsAuthenticated == true)
         {
             return RedirectToAction("Index", "Dashboard");
         }
@@ -50,7 +53,8 @@ public class AccountController : Controller
         {
             var repopulated = await BuildLoginViewModelAsync(model.ReturnUrl);
             repopulated.Username = model.Username ?? string.Empty;
-            repopulated.ErrorMessage = "Please enter both username and password.";
+            repopulated.ErrorMessage = "Please enter both User ID and password.";
+            repopulated.ErrorKey = "auth.missingCredentials";
             return View(repopulated);
         }
 
@@ -64,12 +68,16 @@ public class AccountController : Controller
         {
             var repopulated = await BuildLoginViewModelAsync(model.ReturnUrl);
             repopulated.Username = model.Username;
-            repopulated.ErrorMessage = loginResult.Message ?? "Invalid username or password.";
+            repopulated.ErrorMessage = "Invalid User ID or password.";
+            repopulated.ErrorKey = "auth.invalidCredentials";
             return View(repopulated);
         }
 
         var user = loginResult.User;
-        var setting = (await _unitOfWork.RestaurantSettings.GetAllAsync()).FirstOrDefault() ?? new RestaurantSetting();
+        var setting = await _configCache.GetSettingsAsync();
+
+        var cookieLang = Request.Cookies["rms_lang"];
+        var activeLang = (cookieLang == "mr" || cookieLang == "en") ? cookieLang : user.PreferredLanguage;
 
         // Build security claims with exact role for authorization
         var claims = new List<Claim>
@@ -77,11 +85,12 @@ public class AccountController : Controller
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.GivenName, string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName),
+            new Claim("FullNameMr", string.IsNullOrWhiteSpace(user.FullNameMr) ? (string.IsNullOrWhiteSpace(user.FullName) ? user.Username : user.FullName) : user.FullNameMr),
             new Claim(ClaimTypes.Role, user.Role.ToString()),
             new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
             new Claim("RoleName", user.RoleName),
             new Claim("RestaurantName", setting.RestaurantName),
-            new Claim("KitchenMode", setting.KitchenMode.ToString())
+            new Claim("PreferredLanguage", activeLang)
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -108,7 +117,7 @@ public class AccountController : Controller
         Response.Cookies.Delete("GiranaRMS.Auth");
         Response.Cookies.Delete(CookieAuthenticationDefaults.AuthenticationScheme);
         TempData["Success"] = "You have been signed out successfully.";
-        return RedirectToAction(nameof(Login), new { switchUser = true });
+        return RedirectToAction(nameof(Login));
     }
 
     [HttpPost]
@@ -164,6 +173,37 @@ public class AccountController : Controller
         });
     }
 
+    [HttpGet("/api/restaurant-settings/public")]
+    [AllowAnonymous]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> GetPublicRestaurantSettings()
+    {
+        var dto = await _configCache.GetPublicSettingsAsync();
+        return Json(dto);
+    }
+
+    [HttpPost("/Account/SetLanguage")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetLanguage([FromBody] LanguagePreferenceDto dto)
+    {
+        var lang = dto?.Language == "mr" ? "mr" : "en";
+        Response.Cookies.Append("rms_lang", lang, new CookieOptions
+        {
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+            HttpOnly = false,
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
+        });
+
+        if (User.Identity?.IsAuthenticated == true &&
+            int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out int userId))
+        {
+            await _authService.UpdatePreferredLanguageAsync(userId, lang);
+        }
+
+        return Json(new { success = true, language = lang });
+    }
+
     [HttpGet]
     [AllowAnonymous]
     public IActionResult AccessDenied()
@@ -173,23 +213,24 @@ public class AccountController : Controller
 
     private async Task<LoginViewModel> BuildLoginViewModelAsync(string? returnUrl)
     {
-        var settings = await _unitOfWork.RestaurantSettings.GetAllAsync();
-        var setting = settings.FirstOrDefault() ?? new RestaurantSetting();
-
-        string kmName = setting.KitchenMode switch
-        {
-            KitchenMode.FullKDS => "Mode 1: Full KDS",
-            KitchenMode.NoDevice => "Mode 3: No Kitchen Device",
-            _ => "Mode 2: Printer Only"
-        };
+        var setting = await _configCache.GetSettingsAsync();
+        var cookieLang = Request.Cookies["rms_lang"];
 
         return new LoginViewModel
         {
             ReturnUrl = returnUrl,
             RestaurantName = setting.RestaurantName,
-            KitchenModeName = kmName,
-            Username = "manager",
-            Password = "manager123"
+            RestaurantNameMr = setting.RestaurantNameMr,
+            Tagline = setting.Tagline,
+            LogoUrl = setting.LogoUrl ?? string.Empty,
+            PreferredLanguage = (cookieLang == "mr" || cookieLang == "en") ? cookieLang : "en",
+            Username = string.Empty,
+            Password = string.Empty
         };
+    }
+
+    public class LanguagePreferenceDto
+    {
+        public string Language { get; set; } = "en";
     }
 }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace RestaurantManagement.Domain.Entities;
 
 public class MenuItem : BaseEntity
@@ -5,6 +7,8 @@ public class MenuItem : BaseEntity
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
     public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("name_mr")]
+    public string? NameMr { get; set; }
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public decimal TaxPercentage { get; set; } = 5.0m;

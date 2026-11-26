@@ -29,9 +29,10 @@ public class TableService : ITableService
         {
             Id = f.Id,
             Name = f.Name,
+            NameMr = f.NameMr,
             Description = f.Description,
             DisplayOrder = f.DisplayOrder,
-            Tables = tableList.Where(t => t.FloorId == f.Id).Select(t => MapToTableDto(t, f.Name, orderDict, userDict)).ToList()
+            Tables = tableList.Where(t => t.FloorId == f.Id).Select(t => MapToTableDto(t, f.Name, f.NameMr, orderDict, userDict)).ToList()
         });
     }
 
@@ -42,7 +43,11 @@ public class TableService : ITableService
         var orders = (await _unitOfWork.Orders.FindAsync(o => o.Status != OrderStatus.Completed && o.Status != OrderStatus.Cancelled)).ToDictionary(o => o.Id);
         var users = (await _unitOfWork.Users.GetAllAsync()).ToDictionary(u => u.Id);
 
-        return tables.Where(t => !t.IsDeleted).Select(t => MapToTableDto(t, floors.TryGetValue(t.FloorId, out var f) ? f.Name : "", orderDict: orders, userDict: users));
+        return tables.Where(t => !t.IsDeleted).Select(t =>
+        {
+            floors.TryGetValue(t.FloorId, out var f);
+            return MapToTableDto(t, f?.Name ?? "", f?.NameMr, orderDict: orders, userDict: users);
+        });
     }
 
     public async Task<TableDto?> GetTableByIdAsync(int id)
@@ -51,7 +56,7 @@ public class TableService : ITableService
         if (table == null || table.IsDeleted) return null;
 
         var floor = await _unitOfWork.Floors.GetByIdAsync(table.FloorId);
-        return MapToTableDto(table, floor?.Name ?? "");
+        return MapToTableDto(table, floor?.Name ?? "", floor?.NameMr);
     }
 
     public async Task<TableDto> CreateTableAsync(TableCreateUpdateDto dto)
@@ -59,6 +64,7 @@ public class TableService : ITableService
         var table = new Table
         {
             TableNumber = dto.TableNumber,
+            NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim(),
             Capacity = dto.Capacity,
             FloorId = dto.FloorId,
             Status = TableStatus.Available
@@ -68,7 +74,7 @@ public class TableService : ITableService
         await _unitOfWork.SaveChangesAsync();
 
         var floor = await _unitOfWork.Floors.GetByIdAsync(dto.FloorId);
-        return MapToTableDto(table, floor?.Name ?? "");
+        return MapToTableDto(table, floor?.Name ?? "", floor?.NameMr);
     }
 
     public async Task<TableDto> UpdateTableAsync(int id, TableCreateUpdateDto dto)
@@ -77,6 +83,7 @@ public class TableService : ITableService
         if (table == null) throw new KeyNotFoundException($"Table {id} not found");
 
         table.TableNumber = dto.TableNumber;
+        table.NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim();
         table.Capacity = dto.Capacity;
         table.FloorId = dto.FloorId;
         table.UpdatedAt = DateTime.UtcNow;
@@ -85,7 +92,7 @@ public class TableService : ITableService
         await _unitOfWork.SaveChangesAsync();
 
         var floor = await _unitOfWork.Floors.GetByIdAsync(dto.FloorId);
-        return MapToTableDto(table, floor?.Name ?? "");
+        return MapToTableDto(table, floor?.Name ?? "", floor?.NameMr);
     }
 
     public async Task<bool> DeleteTableAsync(int id)
@@ -188,6 +195,7 @@ public class TableService : ITableService
         var floor = new Floor
         {
             Name = dto.Name,
+            NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim(),
             Description = dto.Description,
             DisplayOrder = dto.DisplayOrder
         };
@@ -199,6 +207,7 @@ public class TableService : ITableService
         {
             Id = floor.Id,
             Name = floor.Name,
+            NameMr = floor.NameMr,
             Description = floor.Description,
             DisplayOrder = floor.DisplayOrder
         };
@@ -215,9 +224,10 @@ public class TableService : ITableService
         {
             Id = floor.Id,
             Name = floor.Name,
+            NameMr = floor.NameMr,
             Description = floor.Description,
             DisplayOrder = floor.DisplayOrder,
-            Tables = tables.Select(t => MapToTableDto(t, floor.Name)).ToList()
+            Tables = tables.Select(t => MapToTableDto(t, floor.Name, floor.NameMr)).ToList()
         };
     }
 
@@ -227,6 +237,7 @@ public class TableService : ITableService
         if (floor == null || floor.IsDeleted) throw new KeyNotFoundException($"Floor with id {id} not found.");
 
         floor.Name = dto.Name;
+        floor.NameMr = string.IsNullOrWhiteSpace(dto.NameMr) ? null : dto.NameMr.Trim();
         floor.Description = dto.Description;
         floor.DisplayOrder = dto.DisplayOrder;
         floor.UpdatedAt = DateTime.UtcNow;
@@ -238,6 +249,7 @@ public class TableService : ITableService
         {
             Id = floor.Id,
             Name = floor.Name,
+            NameMr = floor.NameMr,
             Description = floor.Description,
             DisplayOrder = floor.DisplayOrder
         };
@@ -255,14 +267,16 @@ public class TableService : ITableService
         return true;
     }
 
-    private static TableDto MapToTableDto(Table t, string floorName, Dictionary<int, Order>? orderDict = null, Dictionary<int, User>? userDict = null)
+    private static TableDto MapToTableDto(Table t, string floorName, string? floorNameMr = null, Dictionary<int, Order>? orderDict = null, Dictionary<int, User>? userDict = null)
     {
         decimal amount = 0m;
         string? orderNo = null;
+        DateTime? orderCreatedAt = null;
         if (t.CurrentOrderId.HasValue && orderDict != null && orderDict.TryGetValue(t.CurrentOrderId.Value, out var order))
         {
             amount = order.GrandTotal;
             orderNo = order.OrderNumber;
+            orderCreatedAt = order.CreatedAt;
         }
 
         string? waiterName = null;
@@ -275,13 +289,16 @@ public class TableService : ITableService
         {
             Id = t.Id,
             TableNumber = t.TableNumber,
+            NameMr = t.NameMr,
             Capacity = t.Capacity,
             FloorId = t.FloorId,
             FloorName = floorName,
+            FloorNameMr = floorNameMr,
             Status = t.Status,
             CurrentOrderId = t.CurrentOrderId,
             CurrentOrderNumber = orderNo,
             CurrentOrderAmount = amount,
+            CurrentOrderCreatedAt = orderCreatedAt,
             WaiterId = t.WaiterId,
             WaiterName = waiterName,
             HasActiveDraft = t.HasActiveDraft,

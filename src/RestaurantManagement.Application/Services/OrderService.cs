@@ -520,11 +520,6 @@ public class OrderService : IOrderService
         else
         {
             // Still Sent (not started) (OM-B03)
-            if (settings.KitchenMode == KitchenMode.NoDevice && !dto.InformedKitchen)
-            {
-                throw new InvalidOperationException("You must tick 'I have informed the kitchen' before the cancellation is accepted (FR-OM-05, OM-D05).");
-            }
-
             int reduceQty = dto.ReduceByQuantity > 0 ? dto.ReduceByQuantity : (item.Quantity - dto.RemainingQuantity);
             if (reduceQty <= 0) reduceQty = 1;
 
@@ -589,12 +584,6 @@ public class OrderService : IOrderService
 
         var oldItem = await _unitOfWork.OrderItems.GetByIdAsync(dto.OldOrderItemId);
         if (oldItem == null) throw new KeyNotFoundException($"Item {dto.OldOrderItemId} not found");
-
-        var settings = await GetRestaurantSettingAsync();
-        if (settings.KitchenMode == KitchenMode.NoDevice && !dto.InformedKitchen)
-        {
-            throw new InvalidOperationException("You must inform the kitchen before replacing a sent item (FR-OM-05).");
-        }
 
         // Cancel old item
         oldItem.Status = OrderItemStatus.Cancelled;
@@ -734,18 +723,6 @@ public class OrderService : IOrderService
 
         var item = await _unitOfWork.OrderItems.GetByIdAsync(orderItemId);
         if (item == null) throw new KeyNotFoundException($"Item {orderItemId} not found");
-
-        var settings = await GetRestaurantSettingAsync();
-
-        // Kitchen Mode Rules (Section 2.1)
-        if (settings.KitchenMode == KitchenMode.NoDevice && (status == OrderItemStatus.Preparing || status == OrderItemStatus.Ready))
-        {
-            throw new InvalidOperationException("Mode 3 (No kitchen device) does not use Preparing or Ready status. Waiter taps Served directly (Section 2, 2.1).");
-        }
-        if (settings.KitchenMode == KitchenMode.PrinterOnly && status == OrderItemStatus.Preparing)
-        {
-            throw new InvalidOperationException("Mode 2 (Printer only) does not use Preparing status (Section 2, 2.1).");
-        }
 
         item.Status = status;
         if (status == OrderItemStatus.Preparing) item.PreparingAt = DateTime.UtcNow;
@@ -1366,7 +1343,6 @@ public class OrderService : IOrderService
 
     private void ValidateManagerPin(RestaurantSetting setting, string? pin)
     {
-        if (setting.SinglePersonMode) return; // Single-person mode skips approvals (OM-D09)
         if (setting.VoidApproval == VoidApprovalSetting.Off) return;
         if (setting.VoidApproval == VoidApprovalSetting.AnySignedInUser) return;
 

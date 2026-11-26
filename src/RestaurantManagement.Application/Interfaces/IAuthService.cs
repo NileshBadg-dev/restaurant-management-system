@@ -11,4 +11,5 @@ public interface IAuthService
     Task<bool> ChangePasswordAsync(PasswordChangeDto dto);
     Task<bool> ResetPasswordByUsernameAsync(string username, string newPassword);
     Task<bool> ToggleUserStatusAsync(int userId);
+    Task<bool> UpdatePreferredLanguageAsync(int userId, string language);
 }

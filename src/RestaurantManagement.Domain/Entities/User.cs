@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using RestaurantManagement.Domain.Enums;
 
 namespace RestaurantManagement.Domain.Entities;
@@ -8,7 +9,10 @@ public class User : BaseEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
+    [JsonPropertyName("name_mr")]
+    public string? FullNameMr { get; set; }
     public string Phone { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.Waiter;
+    public string PreferredLanguage { get; set; } = "en";
     public DateTime? LastLogin { get; set; }
 }

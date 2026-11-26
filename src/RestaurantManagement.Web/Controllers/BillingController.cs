@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagement.Application.DTOs;
 using RestaurantManagement.Application.Interfaces;
+using RestaurantManagement.Web.Services;
 
 namespace RestaurantManagement.Web.Controllers;
 
@@ -10,11 +11,13 @@ public class BillingController : Controller
 {
     private readonly IBillingService _billingService;
     private readonly IOrderService _orderService;
+    private readonly IWebConfigCacheService _configCache;
 
-    public BillingController(IBillingService billingService, IOrderService orderService)
+    public BillingController(IBillingService billingService, IOrderService orderService, IWebConfigCacheService configCache)
     {
         _billingService = billingService;
         _orderService = orderService;
+        _configCache = configCache;
     }
 
     public async Task<IActionResult> Index()
@@ -45,6 +48,7 @@ public class BillingController : Controller
     {
         var bill = await _billingService.GetBillByIdAsync(id);
         if (bill == null) return NotFound();
+        ViewBag.Setting = await _configCache.GetSettingsAsync();
         return View(bill);
     }
 

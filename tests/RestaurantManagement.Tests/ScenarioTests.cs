@@ -16,8 +16,6 @@ namespace RestaurantManagement.Tests;
 public class ScenarioTests
 {
     private (RestaurantDbContext context, UnitOfWork uow, OrderService orderService, BillingService billingService) CreateTestEnvironment(
-        KitchenMode kitchenMode = KitchenMode.PrinterOnly,
-        bool singlePersonMode = false,
         VoidApprovalSetting voidApproval = VoidApprovalSetting.ManagerPIN,
         BillingUnservedItemsSetting allowBillingUnserved = BillingUnservedItemsSetting.Ask)
     {
@@ -30,11 +28,9 @@ public class ScenarioTests
         // Seed Setting
         context.RestaurantSettings.Add(new RestaurantSetting
         {
-            RestaurantName = "Girana Garden",
+            RestaurantName = "Hotel Kumbharwada",
             CGSTPercentage = 2.5m,
             SGSTPercentage = 2.5m,
-            KitchenMode = kitchenMode,
-            SinglePersonMode = singlePersonMode,
             VoidApproval = voidApproval,
             AllowBillingWithUnservedItems = allowBillingUnserved,
             ManagerPIN = "1234",
@@ -252,7 +248,7 @@ public class ScenarioTests
     [Fact]
     public async Task OM_B04_CancelOrReduceItem_InPreparingState_RequiresManagerPIN_AndMarksWastage()
     {
-        var (context, uow, orderService, _) = CreateTestEnvironment(kitchenMode: KitchenMode.FullKDS);
+        var (context, uow, orderService, _) = CreateTestEnvironment();
 
         var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
         {
@@ -368,7 +364,7 @@ public class ScenarioTests
     [Fact]
     public async Task OM_B09_B10_ChangeItemNote_GeneratesNoteChangeSlip_BlockedIfPreparing()
     {
-        var (context, uow, orderService, _) = CreateTestEnvironment(kitchenMode: KitchenMode.FullKDS);
+        var (context, uow, orderService, _) = CreateTestEnvironment();
 
         var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
         {
@@ -497,59 +493,8 @@ public class ScenarioTests
     }
 
     // =========================================================================
-    // 5D: SMALL-RESTAURANT & KITCHEN MODE DIFFERENCES
+    // 5D: BILLING POLICY SETTINGS
     // =========================================================================
-
-    [Fact]
-    public async Task OM_D02_Mode2_PrinterOnly_SkipsPreparingStatus()
-    {
-        var (_, _, orderService, _) = CreateTestEnvironment(kitchenMode: KitchenMode.PrinterOnly);
-
-        var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
-        {
-            TableId = 1,
-            Covers = 2,
-            Items = new List<CreateOrderItemDto> { new CreateOrderItemDto { MenuItemId = 1, Quantity = 1 } }
-        });
-        await orderService.SendKOTAsync(draft.Id);
-        var order = await orderService.GetOrderByIdAsync(draft.Id);
-        var item = order!.Items.First();
-
-        // Preparing status blocked in Mode 2
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            orderService.UpdateItemStatusAsync(order.Id, item.Id, OrderItemStatus.Preparing));
-        Assert.Contains("Mode 2 (Printer only) does not use Preparing status", ex.Message);
-
-        // Ready and Served are allowed
-        var updated = await orderService.UpdateItemStatusAsync(order.Id, item.Id, OrderItemStatus.Ready);
-        Assert.Equal(OrderItemStatus.Ready, updated.Items.First().Status);
-    }
-
-    [Fact]
-    public async Task OM_D03_Mode3_NoKitchenDevice_SkipsPreparingAndReady_GoesStraightToServed()
-    {
-        var (_, _, orderService, _) = CreateTestEnvironment(kitchenMode: KitchenMode.NoDevice);
-
-        var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
-        {
-            TableId = 1,
-            Covers = 2,
-            Items = new List<CreateOrderItemDto> { new CreateOrderItemDto { MenuItemId = 1, Quantity = 1 } }
-        });
-        await orderService.SendKOTAsync(draft.Id);
-        var order = await orderService.GetOrderByIdAsync(draft.Id);
-        var item = order!.Items.First();
-
-        // Preparing and Ready blocked in Mode 3
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            orderService.UpdateItemStatusAsync(order.Id, item.Id, OrderItemStatus.Preparing));
-        await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            orderService.UpdateItemStatusAsync(order.Id, item.Id, OrderItemStatus.Ready));
-
-        // Directly served
-        var served = await orderService.UpdateItemStatusAsync(order.Id, item.Id, OrderItemStatus.Served);
-        Assert.Equal(OrderItemStatus.Served, served.Items.First().Status);
-    }
 
     [Fact]
     public async Task OM_D04_AllowBillingWithUnservedItems_SettingEnforced()
@@ -581,62 +526,6 @@ public class ScenarioTests
 
         var billedOrder = await orderServiceAsk.GetOrderByIdAsync(draftAsk.Id);
         Assert.All(billedOrder!.Items, i => Assert.Equal(OrderItemStatus.Served, i.Status));
-    }
-
-    [Fact]
-    public async Task OM_D05_Mode3_ReduceItem_RequiresInformedKitchenCheck()
-    {
-        var (_, _, orderService, _) = CreateTestEnvironment(kitchenMode: KitchenMode.NoDevice);
-
-        var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
-        {
-            TableId = 1,
-            Covers = 2,
-            Items = new List<CreateOrderItemDto> { new CreateOrderItemDto { MenuItemId = 1, Quantity = 2 } }
-        });
-        await orderService.SendKOTAsync(draft.Id);
-        var order = await orderService.GetOrderByIdAsync(draft.Id);
-        var item = order!.Items.First();
-
-        // Not ticked -> rejected (FR-OM-05, OM-D05)
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => orderService.ReduceItemQuantityAsync(new ReduceItemDto
-        {
-            OrderId = order.Id,
-            OrderItemId = item.Id,
-            ReduceByQuantity = 1,
-            Reason = "Customer mind changed",
-            InformedKitchen = false
-        }));
-        Assert.Contains("I have informed the kitchen", ex.Message);
-
-        // Ticked -> accepted
-        var updated = await orderService.ReduceItemQuantityAsync(new ReduceItemDto
-        {
-            OrderId = order.Id,
-            OrderItemId = item.Id,
-            ReduceByQuantity = 1,
-            Reason = "Customer mind changed",
-            InformedKitchen = true
-        });
-        Assert.NotNull(updated);
-    }
-
-    [Fact]
-    public async Task OM_D09_SinglePersonMode_AutoPassesManagerApprovals()
-    {
-        var (_, _, orderService, _) = CreateTestEnvironment(singlePersonMode: true, voidApproval: VoidApprovalSetting.ManagerPIN);
-
-        var draft = await orderService.SaveDraftAsync(new SaveDraftOrderDto
-        {
-            TableId = 1,
-            Covers = 2,
-            Items = new List<CreateOrderItemDto> { new CreateOrderItemDto { MenuItemId = 1, Quantity = 1 } }
-        });
-        await orderService.SendKOTAsync(draft.Id);
-
-        // Cancel order after KOT normally requires manager PIN, but single-person mode bypasses it
-        bool cancelled = await orderService.CancelOrderAsync(draft.Id, "Guest left suddenly", managerPin: null);
-        Assert.True(cancelled);
     }
 
     // =========================================================================
